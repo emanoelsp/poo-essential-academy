@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext"
 import { Header } from "@/components/shared/Header"
 import { XPToastListener } from "@/components/features/gamification/XPToast"
 import { ProgressSync } from "@/components/features/gamification/ProgressSync"
+import { SubmissionSync } from "@/components/features/gamification/SubmissionSync"
 import "./globals.css"
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] })
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Toaster position="bottom-right" />
             <XPToastListener />
             <ProgressSync />
+            <SubmissionSync />
           </SettingsProvider>
         </AuthProvider>
       </body>

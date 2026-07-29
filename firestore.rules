@@ -23,6 +23,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Challenge submissions: students submit their own; admins review all
+    match /submissions/{id} {
+      // Owner reads their own; admins read the whole queue.
+      // The doc id is `{uid}_{slug}`, so we authorize by id prefix — this also
+      // permits reading a not-yet-existing submission (resource == null).
+      allow read: if request.auth != null &&
+        (isAdmin() || id.split('_')[0] == request.auth.uid);
+
+      // Student creates a pending submission for themselves
+      allow create: if request.auth != null &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.status == 'pending';
+
+      // Student may re-submit their own (e.g. after a rejection), always as pending
+      allow update: if request.auth != null &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.status == 'pending';
+
+      // Admins approve / reject / clean up
+      allow update, delete: if isAdmin();
+    }
+
     function isAdmin() {
       return request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
