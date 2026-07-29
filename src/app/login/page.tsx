@@ -83,8 +83,14 @@ export default function LoginPage() {
       await loginWithGoogle()
       const cu = getFirebaseAuth().currentUser
       router.push(cu && isAdminEmail(cu.email ?? '') ? '/admin' : '/dashboard')
-    } catch {
-      setError('Erro ao entrar com Google.')
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return
+      else if (code === 'auth/popup-blocked') setError('Popup bloqueado pelo navegador. Libere popups para este site.')
+      else if (code === 'auth/unauthorized-domain') setError('Este domínio não está autorizado no Firebase Auth.')
+      else if (code === 'auth/operation-not-allowed') setError('Login com Google não está habilitado no projeto Firebase.')
+      else if (code === 'permission-denied') setError('Login OK, mas o acesso ao banco foi negado (regras do Firestore).')
+      else { console.error('Google login error:', e); setError('Erro ao entrar com Google.') }
     } finally { setLoading(false) }
   }
 
