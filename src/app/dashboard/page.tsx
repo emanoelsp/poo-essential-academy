@@ -11,13 +11,16 @@ import { CURRICULUM } from '@/content/data/curriculum'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { getLevelFromXP, LEVELS } from '@/lib/gamification'
+import { computeGrade, effectiveXP } from '@/lib/grade'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Coins, Zap, Flame, Trophy, BookOpen } from 'lucide-react'
+import Link from 'next/link'
+import { Coins, Zap, Flame, Trophy, BookOpen, GraduationCap, CalendarCheck, Award, AlertTriangle } from 'lucide-react'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, isAdmin, loading: authLoading } = useAuth()
-  const { xp, level, streak, badges, coins, completedEncounters } = useGamificationStore()
+  const { user, profile, isAdmin, loading: authLoading } = useAuth()
+  const { xp, level, streak, badges, coins, completedEncounters, weeklyPresence } = useGamificationStore()
   const currentLevel = getLevelFromXP(xp)
 
   useEffect(() => {
@@ -30,6 +33,14 @@ export default function DashboardPage() {
   const totalXPAvailable = CURRICULUM.reduce(
     (s, m) => s + m.encounters.reduce((es, e) => es + e.xp, 0), 0
   )
+
+  const grade = computeGrade({
+    createdAt:           profile?.createdAt,
+    weeklyPresence,
+    completedEncounters: completedEncounters.length,
+    totalEncounters,
+  })
+  const netXP = effectiveXP(xp, grade.xpPenalty)
 
   if (authLoading || !user || isAdmin) {
     return (
@@ -85,6 +96,61 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Nota da UC + presença semanal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <GraduationCap size={18} className="text-primary" />
+            Nota da UC de POO
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="rounded-xl border bg-muted/30 py-4 text-center">
+              <p className="text-3xl font-black text-primary">{grade.grade.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">de 10 (parcial)</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 py-4 text-center">
+              <p className="text-3xl font-black">{Math.round(grade.activitiesRatio * 100)}%</p>
+              <p className="text-xs text-muted-foreground mt-0.5">atividades (70%)</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 py-4 text-center">
+              <p className="text-3xl font-black">{grade.weeksPresent}/{grade.weeksElapsed}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">presença (30%)</p>
+            </div>
+            <div className="rounded-xl border bg-muted/30 py-4 text-center">
+              <p className="text-3xl font-black">{netXP}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">XP após penalidade</p>
+            </div>
+          </div>
+
+          {grade.weeksMissed > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+              <span>
+                Você faltou <strong>{grade.weeksMissed} semana(s)</strong> — penalidade de{' '}
+                <strong>−{grade.xpPenalty} XP</strong>. Entre toda semana para não perder pontos.
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <CalendarCheck size={14} className="text-green-600 dark:text-green-400" />
+            <span>Presença registrada automaticamente ao acessar o curso a cada semana.</span>
+          </div>
+
+          {grade.complete ? (
+            <Link href="/certificado" className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'gap-1.5')}>
+              <Award size={15} /> Ver meu certificado
+            </Link>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Conclua os {totalEncounters} encontros para liberar o certificado ({completedEncounters.length}/{totalEncounters}).
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* XP Progress */}
       <Card>

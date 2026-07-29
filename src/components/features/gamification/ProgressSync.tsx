@@ -16,6 +16,7 @@ export function ProgressSync() {
     if (!user) return
     getUserProgress(user.uid).then((data) => {
       store.hydrateFromFirestore(data)
+      store.checkWeeklyPresence()
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid])
@@ -45,6 +46,7 @@ export function ProgressSync() {
         completedEncounters: store.completedEncounters,
         coins:               store.coins,
         challengeProgress:   store.challengeProgress,
+        weeklyPresence:      store.weeklyPresence,
       })
     }, 2000)
     return () => {
@@ -58,6 +60,7 @@ export function ProgressSync() {
     store.badges.length,
     store.completedEncounters.length,
     store.streak,
+    store.weeklyPresence.length,
     // challengeProgress changes are tracked via coins (each task adds coins)
     // so no extra dep needed — store.coins already triggers the save
   ])

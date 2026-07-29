@@ -8,6 +8,7 @@ import {
   getXPProgressPercent,
   BADGES,
 } from '@/lib/gamification'
+import { isoWeekKey } from '@/lib/grade'
 import type { GamificationState, XPEvent, ChallengeProgress } from '@/types'
 
 export const COIN_VALUES: Record<string, number> = {
@@ -24,10 +25,12 @@ interface GamificationStore extends GamificationState {
   completedEncounters: string[]
   coins:              number
   challengeProgress:  Record<string, ChallengeProgress>
+  weeklyPresence:     string[]
 
   addXP:               (event: XPEvent) => void
   earnBadge:           (badgeId: string) => void
   checkDailyLogin:     () => void
+  checkWeeklyPresence: () => void
   clearPendingEvents:  () => void
   completeEncounter:   (slug: string) => void
   isEncounterCompleted:(slug: string) => boolean
@@ -46,6 +49,7 @@ interface GamificationStore extends GamificationState {
     streak: number; lastLoginDate: string | null
     completedEncounters: string[]; coins: number
     challengeProgress?: Record<string, ChallengeProgress>
+    weeklyPresence?: string[]
   }) => void
 }
 
@@ -54,7 +58,7 @@ export const useGamificationStore = create<GamificationStore>()(
     (set, get) => ({
       xp: 0, level: 1, levelName: 'Iniciante', badges: [], streak: 0,
       lastLoginDate: null, pendingEvents: [], completedEncounters: [],
-      coins: 0, challengeProgress: {},
+      coins: 0, challengeProgress: {}, weeklyPresence: [],
 
       addXP: (event) => {
         set((state) => {
@@ -93,6 +97,12 @@ export const useGamificationStore = create<GamificationStore>()(
         const newStreak = lastLoginDate === yesterday ? streak + 1 : 1
         set({ streak: newStreak, lastLoginDate: today })
         addXP({ type: 'daily_login', xp: 10, label: `Login diário (${newStreak} dias)` })
+      },
+
+      checkWeeklyPresence: () => {
+        const key = isoWeekKey(new Date())
+        if (get().weeklyPresence.includes(key)) return
+        set((state) => ({ weeklyPresence: [...state.weeklyPresence, key] }))
       },
 
       completeEncounter: (slug) => {
@@ -159,6 +169,7 @@ export const useGamificationStore = create<GamificationStore>()(
           completedEncounters: Array.from(new Set([...state.completedEncounters, ...data.completedEncounters])),
           coins:               Math.max(state.coins, data.coins),
           challengeProgress:   mergedChallenge,
+          weeklyPresence:      Array.from(new Set([...state.weeklyPresence, ...(data.weeklyPresence ?? [])])),
         })
       },
     }),

@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { getAllStudents, getAllProgress, setUserRole, type UserProfile, type UserProgress } from '@/lib/firestore'
 import { CURRICULUM } from '@/content/data/curriculum'
+import { computeGrade } from '@/lib/grade'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShieldCheck, User, Coins, Trophy, BookOpen, RefreshCw, Sword, ChevronDown, ChevronUp } from 'lucide-react'
+import { ShieldCheck, User, Coins, Trophy, BookOpen, RefreshCw, Sword, ChevronDown, ChevronUp, GraduationCap, CalendarCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -91,6 +92,12 @@ export default function AlunosAdminPage() {
               const prog = cp[ch.slug]
               return prog && prog.completedTaskIds.length === ch.tasks.length && ch.tasks.length > 0
             }).length
+            const grade = computeGrade({
+              createdAt:           s.createdAt,
+              weeklyPresence:      s.progress?.weeklyPresence,
+              completedEncounters: completed,
+              totalEncounters,
+            })
             const isOpen = expanded === s.uid
 
             return (
@@ -137,6 +144,13 @@ export default function AlunosAdminPage() {
 
                     {/* Stats */}
                     <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center gap-1 text-xs font-bold">
+                        <GraduationCap size={13} className="text-primary" />
+                        <span className={cn(grade.grade >= 6 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400')}>
+                          {grade.grade.toFixed(1)}
+                        </span>
+                      </div>
+                      <Stat icon={<CalendarCheck size={13} className="text-green-700 dark:text-green-400" />} label={`${grade.weeksPresent}/${grade.weeksElapsed} sem.`} />
                       <Stat icon={<Trophy size={13} className="text-amber-700 dark:text-amber-400" />} label={`${xp} XP`} />
                       <Stat icon={<Coins size={13} className="text-yellow-600 dark:text-yellow-400" />} label={`${coins} coins`} />
                       <Stat icon={<Sword size={13} className="text-amber-700 dark:text-amber-400" />} label={`${challengesDone}/${CHALLENGE_ENCOUNTERS.length} desafios`} />

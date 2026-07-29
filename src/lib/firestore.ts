@@ -32,6 +32,7 @@ export interface UserProgress {
   completedEncounters: string[]
   coins: number
   challengeProgress?: Record<string, { completedTaskIds: string[]; totalCoins: number }>
+  weeklyPresence?: string[]
   updatedAt: unknown
 }
 
@@ -115,6 +116,7 @@ const defaultProgress = (): UserProgress => ({
   completedEncounters: [],
   coins: 0,
   challengeProgress: {},
+  weeklyPresence: [],
   updatedAt: null,
 })
 
