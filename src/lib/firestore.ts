@@ -6,10 +6,13 @@ import {
   collection,
   getDocs,
   onSnapshot,
+  query,
+  where,
   serverTimestamp,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { getFirebaseDb } from './firebase'
+import type { Submission, SubmissionStatus } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -189,5 +192,97 @@ export function watchContentSettings(cb: (s: ContentSettings) => void): Unsubscr
         ? (snap.data() as ContentSettings)
         : { gabaritoHidden: false, hiddenEncounters: [] }
     )
+  })
+}
+
+// ─── Challenge submissions (teacher validation queue) ──────────────────────────
+
+const submissionId = (uid: string, slug: string) => `${uid}_${slug}`
+
+export interface CreateSubmissionInput {
+  uid: string
+  studentName: string
+  studentEmail: string
+  slug: string
+  encounterNumber: number
+  encounterTitle: string
+  module: number
+  xp: number
+  badgeId?: string
+  proofUrl: string
+  note?: string
+}
+
+// Student submits (or re-submits) a challenge for teacher validation.
+export async function createSubmission(input: CreateSubmissionInput) {
+  const db = getFirebaseDb()
+  const id = submissionId(input.uid, input.slug)
+  // Firestore rejects `undefined` values — only include optional fields when set.
+  const data: Record<string, unknown> = {
+    id,
+    uid:             input.uid,
+    studentName:     input.studentName,
+    studentEmail:    input.studentEmail,
+    slug:            input.slug,
+    encounterNumber: input.encounterNumber,
+    encounterTitle:  input.encounterTitle,
+    module:          input.module,
+    xp:              input.xp,
+    proofUrl:        input.proofUrl,
+    status:          'pending' as SubmissionStatus,
+    createdAt:       serverTimestamp(),
+    reviewedAt:      null,
+    reviewedBy:      null,
+    reviewNote:      null,
+  }
+  if (input.badgeId) data.badgeId = input.badgeId
+  if (input.note)    data.note    = input.note
+  await setDoc(doc(db, 'submissions', id), data)
+}
+
+// Watch a single student's submission for one challenge.
+export function watchSubmission(
+  uid: string,
+  slug: string,
+  cb: (s: Submission | null) => void
+): Unsubscribe {
+  const db = getFirebaseDb()
+  return onSnapshot(
+    doc(db, 'submissions', submissionId(uid, slug)),
+    (snap) => cb(snap.exists() ? (snap.data() as Submission) : null),
+    () => cb(null)
+  )
+}
+
+// Watch all submissions for one student (used to apply XP once approved).
+export function watchUserSubmissions(uid: string, cb: (s: Submission[]) => void): Unsubscribe {
+  const db = getFirebaseDb()
+  const q  = query(collection(db, 'submissions'), where('uid', '==', uid))
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => d.data() as Submission)), () => cb([]))
+}
+
+// Watch the whole validation queue (admin only).
+export function watchAllSubmissions(cb: (s: Submission[]) => void): Unsubscribe {
+  const db = getFirebaseDb()
+  return onSnapshot(
+    collection(db, 'submissions'),
+    (snap) => cb(snap.docs.map((d) => d.data() as Submission)),
+    () => cb([])
+  )
+}
+
+// Teacher approves or rejects a submission.
+export async function reviewSubmission(
+  id: string,
+  decision: 'approved' | 'rejected',
+  reviewedBy: string,
+  reviewNote?: string
+) {
+  const db = getFirebaseDb()
+  await updateDoc(doc(db, 'submissions', id), {
+    status:     decision,
+    reviewedAt: serverTimestamp(),
+    reviewedBy,
+    reviewNote: reviewNote ?? null,
   })
 }

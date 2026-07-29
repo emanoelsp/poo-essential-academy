@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { watchAllSubmissions } from '@/lib/firestore'
 import {
   LayoutDashboard,
   Lock,
   BookOpen,
   Users,
+  Sword,
   ChevronRight,
   ShieldCheck,
 } from 'lucide-react'
@@ -16,22 +18,33 @@ import { cn } from '@/lib/utils'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/admin',          label: 'Dashboard',  icon: LayoutDashboard },
-  { href: '/admin/modulos',  label: 'Módulos',    icon: Lock            },
-  { href: '/admin/conteudo', label: 'Gabarito',   icon: BookOpen        },
-  { href: '/admin/alunos',   label: 'Alunos',     icon: Users           },
+  { href: '/admin',           label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/admin/modulos',   label: 'Módulos',     icon: Lock            },
+  { href: '/admin/conteudo',  label: 'Gabarito',    icon: BookOpen        },
+  { href: '/admin/validacoes',label: 'Validações',  icon: Sword           },
+  { href: '/admin/alunos',    label: 'Alunos',      icon: Users           },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
     if (!loading && (!profile || profile.role !== 'admin')) {
       router.replace('/cursos/poo-java')
     }
   }, [loading, profile, router])
+
+  // Live count of pending challenge validations for the sidebar badge
+  useEffect(() => {
+    if (!profile || profile.role !== 'admin') return
+    const unsub = watchAllSubmissions((subs) =>
+      setPendingCount(subs.filter((s) => s.status === 'pending').length)
+    )
+    return unsub
+  }, [profile])
 
   if (loading || !profile || profile.role !== 'admin') {
     return (
@@ -69,7 +82,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Icon size={16} />
               {label}
-              {pathname === href && <ChevronRight size={14} className="ml-auto" />}
+              {href === '/admin/validacoes' && pendingCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                  {pendingCount}
+                </span>
+              )}
+              {pathname === href && !(href === '/admin/validacoes' && pendingCount > 0) && (
+                <ChevronRight size={14} className="ml-auto" />
+              )}
             </Link>
           ))}
         </nav>

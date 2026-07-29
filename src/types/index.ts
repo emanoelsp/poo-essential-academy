@@ -87,3 +87,27 @@ export interface ChallengeProgress {
   completedTaskIds: string[]
   totalCoins: number
 }
+
+// ── Teacher validation of challenges ──────────────────────────────────────────
+
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
+
+export interface Submission {
+  id: string            // `${uid}_${slug}` — deterministic, one per student/challenge
+  uid: string
+  studentName: string
+  studentEmail: string
+  slug: string
+  encounterNumber: number
+  encounterTitle: string
+  module: number
+  xp: number
+  badgeId?: string
+  proofUrl: string      // link do repositório/commit no git
+  note?: string         // observação opcional do aluno
+  status: SubmissionStatus
+  createdAt: unknown
+  reviewedAt?: unknown
+  reviewedBy?: string    // email do professor
+  reviewNote?: string    // feedback do professor (ex.: motivo da recusa)
+}
