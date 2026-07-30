@@ -36,7 +36,9 @@ function detectCallout(text: string): {
     [/^\*\*(Atenção|Cuidado|Importante|Aviso):?\*\*\s*/i, 'warning'],
     [/^\*\*(Nota|Observação|Lembre):?\*\*\s*/i, 'note'],
     [/^\*\*(Dica|Tip|Pro tip|Dicas):?\*\*\s*/i, 'tip'],
-    [/^\*\*(Gabarito|Resposta|Respostas|Resposta modelo|Resposta esperada|Gabarito esperado):?\*\*\s*/i, 'gabarito'],
+    // Answer keys — match the label even when it carries extra text before the
+    // closing `**`, e.g. `**Gabarito esperado — X:**`, `**Resposta modelo para "Y":**`.
+    [/^\*\*(Gabarito|Resposta|Respostas|Solução|Resolução)[^*]*\*\*\s*/i, 'gabarito'],
   ]
   for (const [re, type] of patterns) {
     if (re.test(text)) return { type, cleaned: text.replace(re, '') }
@@ -281,10 +283,38 @@ function inlineFormat(text: string): React.ReactNode {
   )
 }
 
+// A gabarito blockquote starts with an answer-key label. We must strip the
+// WHOLE blockquote (all contiguous `>` lines) — not just the label line —
+// because answers often embed fenced code (`> ```java ... > ```). Those fences
+// would otherwise be extracted by the top-level code splitter and rendered as
+// visible CodeBlocks that ignore `showGabarito`.
+const GABARITO_BLOCKQUOTE = /^\s*>\s*\*\*(Gabarito|Resposta|Respostas|Solução|Resolução)/i
+
+function stripHiddenGabaritos(content: string): string {
+  const lines = content.split('\n')
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (GABARITO_BLOCKQUOTE.test(lines[i])) {
+      // Consume the entire blockquote (including any embedded code fences).
+      while (i < lines.length && /^\s*>/.test(lines[i])) i++
+      // Leave a marker the parser renders as the "locked" placeholder.
+      out.push('> **Gabarito:** oculto')
+      continue
+    }
+    out.push(lines[i])
+    i++
+  }
+  return out.join('\n')
+}
+
 export function ContentRenderer({ content, showGabarito = true }: ContentRendererProps) {
+  // When hidden, remove gabarito blocks at the source so neither their text nor
+  // any embedded code can leak through the renderer.
+  const source = showGabarito ? content : stripHiddenGabaritos(content)
   return (
     <article className="max-w-none space-y-0">
-      {parseMermaidAndCode(content, showGabarito)}
+      {parseMermaidAndCode(source, showGabarito)}
     </article>
   )
 }
