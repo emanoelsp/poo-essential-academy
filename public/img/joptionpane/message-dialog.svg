@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="190" viewBox="0 0 460 190" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <g filter="url(#sh)">
+    <rect x="8.5" y="8.5" width="443" height="163" rx="8" fill="#ffffff" stroke="#c9ced6"/>
+    <path d="M8 16 a8 8 0 0 1 8 -8 h427 a8 8 0 0 1 8 8 v22 h-451 z" fill="#f3f4f6"/>
+    <line x1="8" y1="38" x2="452" y2="38" stroke="#e5e7eb"/>
+    <text x="24" y="27" font-size="13" fill="#374151" font-weight="600">Resultado</text>
+    <text x="430" y="28" font-size="16" fill="#6b7280" text-anchor="middle">&#215;</text>
+    <circle cx="50" cy="98" r="17" fill="#2563eb"/>
+    <text x="50" y="105" font-size="20" fill="#ffffff" text-anchor="middle" font-weight="700" font-style="italic">i</text>
+    <text x="84" y="104" font-size="14.5" fill="#111827">Resultado de <tspan font-weight="700">4 + 6</tspan> = <tspan fill="#2563eb" font-weight="700">10</tspan></text>
+    <rect x="352" y="130" width="90" height="30" rx="6" fill="#2563eb"/>
+    <text x="397" y="150" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="600">OK</text>
+  </g>
+</svg>

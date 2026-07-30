@@ -213,6 +213,21 @@ function MarkdownText({ text, showGabarito }: { text: string; showGabarito: bool
       i++; continue
     }
 
+    // Image (block-level): ![alt](src)
+    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    if (imgMatch) {
+      flushList()
+      const [, alt, src] = imgMatch
+      nodes.push(
+        <figure key={i} className="my-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={alt} loading="lazy" className="mx-auto max-w-full rounded-lg border bg-white" />
+          {alt && <figcaption className="mt-2 text-center text-xs text-muted-foreground">{alt}</figcaption>}
+        </figure>
+      )
+      i++; continue
+    }
+
     // Headings
     const h1 = line.match(/^# (.+)/)
     if (h1) { flushList(); nodes.push(<h1 key={i} className="mt-10 mb-4 text-3xl font-bold tracking-tight">{inlineFormat(h1[1])}</h1>); i++; continue }
