@@ -447,57 +447,7 @@ public class JuntadorStrings {
 
 ---
 
-### Exercício 5 — Difícil · 25 XP
-**Mini-Calculadora Científica**
-
-Crie a classe `Cientifica` com os métodos abaixo. Use sobrecarga onde fizer sentido e organize o código em regiões comentadas.
-
-| Método | Descrição |
-|--------|-----------|
-| `mmc(int a, int b)` | Mínimo Múltiplo Comum |
-| `mdc(int a, int b)` | Máximo Divisor Comum (algoritmo de Euclides) |
-| `ehPerfeito(int n)` | `true` se a soma dos divisores (excluindo ele mesmo) == n |
-| `digitoVerificador(int n)` | Soma os dígitos do número até restar 1 dígito |
-
-```java
-public class Cientifica {
-
-    public static int mdc(int a, int b) {
-        // Algoritmo de Euclides: mdc(a, b) = mdc(b, a % b)
-        // SEU CÓDIGO AQUI
-    }
-
-    public static int mmc(int a, int b) {
-        // mmc(a, b) = (a * b) / mdc(a, b)
-        // SEU CÓDIGO AQUI
-    }
-
-    public static boolean ehPerfeito(int n) {
-        // Um número perfeito tem a soma dos seus divisores próprios == ele mesmo
-        // Ex: 6 = 1 + 2 + 3  ✓    28 = 1+2+4+7+14  ✓
-        // SEU CÓDIGO AQUI
-    }
-
-    public static int digitoVerificador(int n) {
-        // Enquanto o número tiver mais de 1 dígito, some seus dígitos
-        // Ex: 493 → 4+9+3 = 16 → 1+6 = 7
-        // SEU CÓDIGO AQUI
-    }
-
-    public static void main(String[] args) {
-        System.out.println("MDC(12, 8) = " + mdc(12, 8));        // 4
-        System.out.println("MMC(4, 6)  = " + mmc(4, 6));         // 12
-        System.out.println("6 é perfeito? " + ehPerfeito(6));     // true
-        System.out.println("12 é perfeito? " + ehPerfeito(12));   // false
-        System.out.println("28 é perfeito? " + ehPerfeito(28));   // true
-        System.out.println("Dígito de 493: " + digitoVerificador(493)); // 7
-    }
-}
-```
-
----
-
-### Exercício 6 — Troubleshooting · 25 XP
+### Exercício 5 — Troubleshooting · 25 XP
 **Diagnóstico: Sobrecarga Ambígua e Escopo**
 
 O código abaixo contém **3 erros**. Um causa ambiguidade de sobrecarga, um cria variável que esconde atributo e um usa variável fora do seu escopo. Identifique, explique e corrija.
