@@ -11,10 +11,41 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Users can read/write only their own progress
+    // Progress: owner (and admins) read; owner writes only source-of-truth facts.
+    // xp / level / levelName / coins are DERIVED on read by the app and must
+    // never be changed by a client write — this blocks tampering (e.g. editing
+    // localStorage or writing arbitrary XP straight to Firestore).
     match /progress/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      allow read: if isAdmin();
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow create, update: if request.auth != null &&
+        request.auth.uid == uid &&
+        derivedFieldsFrozen() &&
+        factsWellFormed();
+    }
+
+    // Derived scoreboard fields may not change value on a write. Because the app
+    // uses a merge write that never sends these fields, the pre-existing value is
+    // preserved and this passes; any attempt to raise them is rejected.
+    function derivedFieldsFrozen() {
+      let incoming = request.resource.data;
+      let prevXp        = resource == null ? 0 : resource.data.get('xp', 0);
+      let prevLevel     = resource == null ? 1 : resource.data.get('level', 1);
+      let prevCoins     = resource == null ? 0 : resource.data.get('coins', 0);
+      let prevLevelName = resource == null ? 'Iniciante' : resource.data.get('levelName', 'Iniciante');
+      return incoming.get('xp', 0)        == prevXp &&
+             incoming.get('level', 1)     == prevLevel &&
+             incoming.get('coins', 0)     == prevCoins &&
+             incoming.get('levelName', 'Iniciante') == prevLevelName;
+    }
+
+    // Progress facts must be well-formed and can only grow (nothing is un-earned).
+    function factsWellFormed() {
+      let d = request.resource.data;
+      return d.completedEncounters is list && d.completedEncounters.size() <= 100 &&
+             d.badges is list && d.badges.size() <= 30 &&
+             (resource == null ||
+               (d.completedEncounters.size() >= resource.data.completedEncounters.size() &&
+                d.badges.size() >= resource.data.badges.size()));
     }
 
     // Settings are read by all authenticated users, written only by admins

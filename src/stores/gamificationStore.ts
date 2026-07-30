@@ -3,9 +3,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
-  getLevelFromXP,
   getNextLevel,
   getXPProgressPercent,
+  deriveTotals,
   BADGES,
 } from '@/lib/gamification'
 import { isoWeekKey } from '@/lib/grade'
@@ -61,18 +61,10 @@ export const useGamificationStore = create<GamificationStore>()(
       coins: 0, challengeProgress: {}, weeklyPresence: [],
 
       addXP: (event) => {
-        set((state) => {
-          const newXP    = state.xp + event.xp
-          const newLevel = getLevelFromXP(newXP)
-          const coinGain = COIN_VALUES[event.type] ?? 0
-          return {
-            xp:            newXP,
-            level:         newLevel.level,
-            levelName:     newLevel.name,
-            coins:         state.coins + coinGain,
-            pendingEvents: [...state.pendingEvents, event],
-          }
-        })
+        // XP is DERIVED from completed work (see deriveTotals) — it is never
+        // accumulated directly, so a tampered value can't stick. addXP only
+        // records the event for the on-screen XP toast / feed.
+        set((state) => ({ pendingEvents: [...state.pendingEvents, event] }))
       },
 
       earnBadge: (badgeId) => {
@@ -80,10 +72,17 @@ export const useGamificationStore = create<GamificationStore>()(
         if (badges.includes(badgeId)) return
         const badge = BADGES.find((b) => b.id === badgeId)
         if (!badge) return
-        set((state) => ({
-          badges: [...state.badges, badgeId],
-          coins:  state.coins + COIN_VALUES.earn_badge,
-        }))
+        set((state) => {
+          const newBadges = [...state.badges, badgeId]
+          return {
+            badges: newBadges,
+            ...deriveTotals({
+              completedEncounters: state.completedEncounters,
+              badges:              newBadges,
+              challengeProgress:   state.challengeProgress,
+            }),
+          }
+        })
         if (badge.xpBonus > 0) {
           addXP({ type: 'badge_earned', xp: badge.xpBonus, label: `Badge: ${badge.name}` })
         }
@@ -108,12 +107,24 @@ export const useGamificationStore = create<GamificationStore>()(
       completeEncounter: (slug) => {
         const { completedEncounters } = get()
         if (completedEncounters.includes(slug)) return
-        set((state) => ({ completedEncounters: [...state.completedEncounters, slug] }))
+        set((state) => {
+          const newCompleted = [...state.completedEncounters, slug]
+          return {
+            completedEncounters: newCompleted,
+            ...deriveTotals({
+              completedEncounters: newCompleted,
+              badges:              state.badges,
+              challengeProgress:   state.challengeProgress,
+            }),
+          }
+        })
       },
 
       isEncounterCompleted: (slug) => get().completedEncounters.includes(slug),
 
-      addCoins: (amount) => set((state) => ({ coins: state.coins + amount })),
+      // Coins are derived from completed work; kept for API compatibility but
+      // intentionally a no-op — direct coin grants would not survive a recompute.
+      addCoins: () => {},
 
       clearPendingEvents: () => set({ pendingEvents: [] }),
       getProgressPercent: () => getXPProgressPercent(get().xp),
@@ -132,11 +143,18 @@ export const useGamificationStore = create<GamificationStore>()(
           completedTaskIds: [...prev.completedTaskIds, taskId],
           totalCoins:       prev.totalCoins + coins,
         }
-        set((state) => ({
-          coins:             state.coins + coins,
-          challengeProgress: { ...state.challengeProgress, [challengeSlug]: updated },
-        }))
-        // Award XP event for tracking (no extra coins from COIN_VALUES)
+        set((state) => {
+          const cp = { ...state.challengeProgress, [challengeSlug]: updated }
+          return {
+            challengeProgress: cp,
+            ...deriveTotals({
+              completedEncounters: state.completedEncounters,
+              badges:              state.badges,
+              challengeProgress:   cp,
+            }),
+          }
+        })
+        // Record the XP event for the toast/feed (XP itself is derived)
         get().addXP({ type: 'challenge_task', xp: Math.round(coins * 0.5), label: `Desafio task: ${taskId}` })
       },
 
@@ -159,20 +177,47 @@ export const useGamificationStore = create<GamificationStore>()(
             totalCoins:       Math.max(local.totalCoins, remote.totalCoins),
           }
         }
+        const badges              = Array.from(new Set([...state.badges, ...data.badges]))
+        const completedEncounters = Array.from(new Set([...state.completedEncounters, ...data.completedEncounters]))
+        // xp / level / levelName / coins from `data` are ignored on purpose —
+        // they are recomputed from the merged source facts below.
         set({
-          xp:                  Math.max(state.xp, data.xp),
-          level:               Math.max(state.level, data.level),
-          levelName:           data.level >= state.level ? data.levelName : state.levelName,
-          badges:              Array.from(new Set([...state.badges, ...data.badges])),
+          badges,
           streak:              Math.max(state.streak, data.streak),
           lastLoginDate:       data.lastLoginDate ?? state.lastLoginDate,
-          completedEncounters: Array.from(new Set([...state.completedEncounters, ...data.completedEncounters])),
-          coins:               Math.max(state.coins, data.coins),
+          completedEncounters,
           challengeProgress:   mergedChallenge,
           weeklyPresence:      Array.from(new Set([...state.weeklyPresence, ...(data.weeklyPresence ?? [])])),
+          ...deriveTotals({ completedEncounters, badges, challengeProgress: mergedChallenge }),
         })
       },
     }),
-    { name: 'poo-academy-gamification' }
+    {
+      name: 'poo-academy-gamification',
+      // Persist only source-of-truth facts. xp/level/levelName/coins are derived
+      // and deliberately NOT stored, so editing them in localStorage has no effect.
+      partialize: (s) => ({
+        completedEncounters: s.completedEncounters,
+        badges:              s.badges,
+        streak:              s.streak,
+        lastLoginDate:       s.lastLoginDate,
+        challengeProgress:   s.challengeProgress,
+        weeklyPresence:      s.weeklyPresence,
+        pendingEvents:       s.pendingEvents,
+      }),
+      // Recompute derived totals from the rehydrated facts on load.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<GamificationStore>
+        const merged = { ...current, ...p }
+        return {
+          ...merged,
+          ...deriveTotals({
+            completedEncounters: merged.completedEncounters ?? [],
+            badges:              merged.badges ?? [],
+            challengeProgress:   merged.challengeProgress ?? {},
+          }),
+        }
+      },
+    }
   )
 )
