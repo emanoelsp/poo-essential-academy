@@ -1,10 +1,42 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import type mermaidType from 'mermaid'
 
 interface MermaidDiagramProps {
   chart: string
   title?: string
+}
+
+// Initialize mermaid exactly once for the whole app.
+let mermaidPromise: Promise<typeof mermaidType> | null = null
+function getMermaid(): Promise<typeof mermaidType> {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then((m) => {
+      m.default.initialize({
+        startOnLoad: false,
+        theme: 'neutral',
+        fontFamily: 'monospace',
+      })
+      return m.default
+    })
+  }
+  return mermaidPromise
+}
+
+// mermaid's render() drives a shared singleton and mutates the document — calling
+// it concurrently (a page with several diagrams mounts them all at once) makes
+// the later renders collide and come back empty. Serialize every render so each
+// diagram is drawn on its own.
+let renderChain: Promise<unknown> = Promise.resolve()
+function queueRender(id: string, chart: string): Promise<string> {
+  const run = renderChain.then(async () => {
+    const mermaid = await getMermaid()
+    const { svg } = await mermaid.render(id, chart)
+    return svg
+  })
+  renderChain = run.catch(() => undefined)
+  return run
 }
 
 export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
@@ -14,21 +46,14 @@ export function MermaidDiagram({ chart, title }: MermaidDiagramProps) {
 
   useEffect(() => {
     let cancelled = false
-    setStatus('loading')
     async function render() {
       try {
-        const mermaid = (await import('mermaid')).default
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: 'neutral',
-          fontFamily: 'monospace',
-        })
         const id = `mermaid-${Math.random().toString(36).slice(2)}`
-        const { svg } = await mermaid.render(id, chart)
-        if (!cancelled && ref.current) {
-          ref.current.innerHTML = svg
-          setStatus('done')
-        }
+        const svg = await queueRender(id, chart)
+        if (cancelled) return
+        if (!svg || !ref.current) throw new Error('Diagrama vazio')
+        ref.current.innerHTML = svg
+        setStatus('done')
       } catch (e) {
         if (!cancelled) {
           setErrorMsg(String(e))
