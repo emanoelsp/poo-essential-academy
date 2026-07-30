@@ -1,4 +1,5 @@
-import type { Badge, Level } from '@/types'
+import type { Badge, ChallengeProgress, Level } from '@/types'
+import { CURRICULUM } from '@/content/data/curriculum'
 
 export const XP_VALUES = {
   COMPLETE_ENCOUNTER: 50,
@@ -115,4 +116,59 @@ export function getXPProgressPercent(xp: number): number {
   const range = next.xpRequired - current.xpRequired
   const earned = xp - current.xpRequired
   return Math.min(Math.round((earned / range) * 100), 100)
+}
+
+// ── Derived totals ─────────────────────────────────────────────────────────
+//
+// XP, level and coins are NEVER trusted from the client or the database — they
+// are recomputed deterministically from the source-of-truth facts:
+//   • completedEncounters — each encounter's XP comes from the curriculum
+//   • badges              — each badge's xpBonus
+//   • challengeProgress   — teacher/tracker-awarded challenge coins
+// This makes a tampered `xp` in localStorage or Firestore inert: it is
+// overwritten by the recomputed value on every read and write.
+
+const ENCOUNTER_XP: Record<string, number> = Object.fromEntries(
+  CURRICULUM.flatMap((m) => m.encounters.map((e) => [e.slug, e.xp]))
+)
+
+const BADGE_XP: Record<string, number> = Object.fromEntries(
+  BADGES.map((b) => [b.id, b.xpBonus])
+)
+
+// Coins granted per legitimate action (kept in sync with COIN_VALUES).
+const COINS_PER_ENCOUNTER = 10
+const COINS_PER_BADGE = 15
+
+export interface ProgressSources {
+  completedEncounters: string[]
+  badges: string[]
+  challengeProgress: Record<string, ChallengeProgress>
+}
+
+export interface DerivedTotals {
+  xp: number
+  level: number
+  levelName: string
+  coins: number
+}
+
+export function deriveTotals(sources: ProgressSources): DerivedTotals {
+  const challengeCoins = Object.values(sources.challengeProgress).reduce(
+    (s, cp) => s + (cp?.totalCoins ?? 0),
+    0
+  )
+
+  const xp =
+    sources.completedEncounters.reduce((s, slug) => s + (ENCOUNTER_XP[slug] ?? 0), 0) +
+    sources.badges.reduce((s, id) => s + (BADGE_XP[id] ?? 0), 0) +
+    Math.round(challengeCoins * 0.5)
+
+  const coins =
+    sources.completedEncounters.length * COINS_PER_ENCOUNTER +
+    sources.badges.length * COINS_PER_BADGE +
+    challengeCoins
+
+  const lvl = getLevelFromXP(xp)
+  return { xp, level: lvl.level, levelName: lvl.name, coins }
 }

@@ -36,15 +36,12 @@ export function ProgressSync() {
     if (!user) return
     if (syncTimer.current) clearTimeout(syncTimer.current)
     syncTimer.current = setTimeout(() => {
+      // Only source-of-truth facts are persisted — xp/level/coins are derived.
       saveUserProgress(user.uid, {
-        xp:                  store.xp,
-        level:               store.level,
-        levelName:           store.levelName,
         badges:              store.badges,
         streak:              store.streak,
         lastLoginDate:       store.lastLoginDate,
         completedEncounters: store.completedEncounters,
-        coins:               store.coins,
         challengeProgress:   store.challengeProgress,
         weeklyPresence:      store.weeklyPresence,
       })

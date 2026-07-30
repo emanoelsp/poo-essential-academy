@@ -35,6 +35,17 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 const googleProvider = new GoogleAuthProvider()
 
+// Session marker read by the proxy/middleware to gate protected routes.
+// Must be written synchronously on login so navigation isn't bounced back
+// to /login before onAuthStateChanged fires.
+function setSessionCookie() {
+  document.cookie = '__poo_session=1; path=/; SameSite=Strict; max-age=43200'
+}
+
+function clearSessionCookie() {
+  document.cookie = '__poo_session=; path=/; max-age=0'
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -45,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser)
       if (firebaseUser) {
         // Mark session for middleware — blocks crawlers from SSG pages
-        document.cookie = '__poo_session=1; path=/; SameSite=Strict; max-age=43200'
+        setSessionCookie()
         try {
           const p = await getOrCreateUserProfile(
             firebaseUser.uid,
@@ -59,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         // Clear session cookie on sign-out
-        document.cookie = '__poo_session=; path=/; max-age=0'
+        clearSessionCookie()
         setProfile(null)
       }
       setLoading(false)
@@ -69,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithEmail = async (email: string, password: string) => {
     const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
+    setSessionCookie() // guarantee cookie before caller navigates to a protected route
     const p = await getOrCreateUserProfile(
       cred.user.uid,
       cred.user.email ?? '',
@@ -80,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerWithEmail = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password)
+    setSessionCookie() // guarantee cookie before caller navigates to a protected route
     await updateProfile(cred.user, { displayName: name })
     const p = await getOrCreateUserProfile(cred.user.uid, email, name, null)
     setProfile(p)
@@ -87,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = async () => {
     const cred = await signInWithPopup(getFirebaseAuth(), googleProvider)
+    setSessionCookie() // guarantee cookie before caller navigates to a protected route
     const p = await getOrCreateUserProfile(
       cred.user.uid,
       cred.user.email ?? '',

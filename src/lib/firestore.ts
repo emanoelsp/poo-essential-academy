@@ -12,6 +12,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { getFirebaseDb } from './firebase'
+import { deriveTotals } from './gamification'
 import type { Submission, SubmissionStatus } from '@/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -123,17 +124,37 @@ const defaultProgress = (): UserProgress => ({
   updatedAt: null,
 })
 
+// xp / level / levelName / coins are NEVER trusted from storage — they are
+// recomputed from the stored source facts so a tampered document is inert.
+function normalizeProgress(raw: Partial<UserProgress>): UserProgress {
+  const base = { ...defaultProgress(), ...raw }
+  return {
+    ...base,
+    ...deriveTotals({
+      completedEncounters: base.completedEncounters ?? [],
+      badges:              base.badges ?? [],
+      challengeProgress:   base.challengeProgress ?? {},
+    }),
+  }
+}
+
+// Fields that are derived on read and must never be written by clients.
+const DERIVED_FIELDS = ['xp', 'level', 'levelName', 'coins'] as const
+
 export async function getUserProgress(uid: string): Promise<UserProgress> {
   const db   = getFirebaseDb()
   const snap = await getDoc(doc(db, 'progress', uid))
-  return snap.exists() ? (snap.data() as UserProgress) : defaultProgress()
+  return normalizeProgress(snap.exists() ? (snap.data() as UserProgress) : defaultProgress())
 }
 
 export async function saveUserProgress(uid: string, progress: Partial<UserProgress>) {
   const db = getFirebaseDb()
+  // Strip derived fields — they are computed on read, never persisted.
+  const safe: Record<string, unknown> = { ...progress }
+  for (const f of DERIVED_FIELDS) delete safe[f]
   await setDoc(
     doc(db, 'progress', uid),
-    { ...progress, updatedAt: serverTimestamp() },
+    { ...safe, updatedAt: serverTimestamp() },
     { merge: true }
   )
 }
@@ -141,14 +162,14 @@ export async function saveUserProgress(uid: string, progress: Partial<UserProgre
 export function watchUserProgress(uid: string, cb: (p: UserProgress) => void): Unsubscribe {
   const db = getFirebaseDb()
   return onSnapshot(doc(db, 'progress', uid), (snap) => {
-    cb(snap.exists() ? (snap.data() as UserProgress) : defaultProgress())
+    cb(normalizeProgress(snap.exists() ? (snap.data() as UserProgress) : defaultProgress()))
   })
 }
 
 export async function getAllProgress(): Promise<(UserProgress & { uid: string })[]> {
   const db   = getFirebaseDb()
   const snap = await getDocs(collection(db, 'progress'))
-  return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as UserProgress) }))
+  return snap.docs.map((d) => ({ uid: d.id, ...normalizeProgress(d.data() as UserProgress) }))
 }
 
 // ─── Admin settings ───────────────────────────────────────────────────────────
