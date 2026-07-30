@@ -53,6 +53,10 @@ O tipo da mensagem muda o **ícone** exibido. Passe uma destas constantes:
 
 ![Janela do showConfirmDialog: título "Parabéns!", texto "Jogar novamente?" e os botões Sim e Não](/img/joptionpane/confirm-dialog.svg)
 
+**`showMessageDialog` com `ERROR_MESSAGE`** — mesmo método, mas com o ícone vermelho de erro. É o que a Task 1 mostra quando o usuário tenta dividir por zero:
+
+![Janela de erro do showMessageDialog: título "Erro", ícone vermelho e texto "Não é possível dividir por zero!" com botão OK](/img/joptionpane/error-dialog.svg)
+
 ### Deixando bonito com HTML
 
 O Swing renderiza **HTML básico** dentro das mensagens. Basta envolver o texto em `<html>...</html>`:
