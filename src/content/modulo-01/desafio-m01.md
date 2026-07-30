@@ -35,60 +35,23 @@ O tipo da mensagem muda o **ícone** exibido. Passe uma destas constantes:
 
 ### Como cada janela aparece na tela
 
-> **Nota:** As caixas abaixo são **representações ilustrativas** de como o Windows/Java desenha cada diálogo — o visual real muda conforme o sistema operacional.
+> **Nota:** As imagens abaixo ilustram como cada diálogo aparece na tela — o visual real muda um pouco conforme o sistema operacional (Windows, macOS, Linux).
 
 **`showMessageDialog`** — só informa e espera o `OK`:
 
-```text
-┌─────────────────────────────────────┐
-│  Resultado                     [ X ]│
-├─────────────────────────────────────┤
-│   ( i )   Resultado de 4 + 6 = 10   │
-│                                     │
-│                [   OK   ]           │
-└─────────────────────────────────────┘
-```
+![Janela do showMessageDialog: título "Resultado", ícone azul de informação, texto "Resultado de 4 + 6 = 10" e botão OK](/img/joptionpane/message-dialog.svg)
 
 **`showInputDialog`** — mostra um campo de texto e devolve o que foi digitado:
 
-```text
-┌─────────────────────────────────────┐
-│  Entrada                       [ X ]│
-├─────────────────────────────────────┤
-│   ( ? )   Primeiro número:          │
-│         ┌─────────────────────────┐ │
-│         │ 4|                      │ │
-│         └─────────────────────────┘ │
-│              [  OK  ]  [ Cancelar ] │
-└─────────────────────────────────────┘
-```
+![Janela do showInputDialog: título "Entrada", ícone de pergunta, texto "Primeiro número:", um campo de texto com "4" e os botões OK e Cancelar](/img/joptionpane/input-dialog.svg)
 
-**`showOptionDialog`** — cria um botão para cada texto do vetor. O retorno é o **índice** do botão clicado:
+**`showOptionDialog`** — cria um botão para cada texto do vetor. O retorno é o **índice** do botão clicado (começando em 0):
 
-```text
-┌──────────────────────────────────────────────┐
-│  Calculadora                            [ X ] │
-├──────────────────────────────────────────────┤
-│   ( ? )   Escolha a operação:                 │
-│                                               │
-│  [ Somar ][ Subtrair ][ Multiplicar ]         │
-│  [ Dividir ][ Sair ]                          │
-└──────────────────────────────────────────────┘
-       índice 0     1          2
-              3        4
-```
+![Janela do showOptionDialog: título "Calculadora", texto "Escolha a operação:" e os botões Somar, Subtrair, Multiplicar, Dividir e Sair, numerados de 0 a 4](/img/joptionpane/option-dialog.svg)
 
 **`showConfirmDialog`** — pergunta e devolve `YES_OPTION` (0) ou `NO_OPTION` (1):
 
-```text
-┌─────────────────────────────────────┐
-│  Parabéns!                     [ X ]│
-├─────────────────────────────────────┤
-│   ( ? )   Jogar novamente?          │
-│                                     │
-│           [  Sim  ]  [  Não  ]      │
-└─────────────────────────────────────┘
-```
+![Janela do showConfirmDialog: título "Parabéns!", texto "Jogar novamente?" e os botões Sim e Não](/img/joptionpane/confirm-dialog.svg)
 
 ### Deixando bonito com HTML
 
@@ -152,83 +115,86 @@ flowchart TD
     OK --> MENU
 ```
 
-> **Gabarito esperado:** — resolução comentada, use como modelo para as próximas tasks:
-> ```java
-> import javax.swing.JOptionPane;
->
-> public class CalculadoraGUI {
->     public static void main(String[] args) {
->         // Cada texto vira um botão; o índice do botão é o retorno do diálogo.
->         String[] operacoes = {"Somar", "Subtrair", "Multiplicar", "Dividir", "Sair"};
->
->         while (true) {
->             int op = JOptionPane.showOptionDialog(
->                 null,                          // sem janela pai
->                 "Escolha a operação:",         // mensagem
->                 "Calculadora",                 // título
->                 JOptionPane.DEFAULT_OPTION,
->                 JOptionPane.QUESTION_MESSAGE,  // ícone de pergunta
->                 null,
->                 operacoes,                     // os botões
->                 operacoes[0]                   // botão em foco
->             );
->
->             // Índice 4 = "Sair"; CLOSED_OPTION = usuário clicou no X.
->             if (op == 4 || op == JOptionPane.CLOSED_OPTION) {
->                 JOptionPane.showMessageDialog(null, "Até a próxima! 👋");
->                 break;
->             }
->
->             try {
->                 // parseDouble converte o texto digitado em número.
->                 double a = Double.parseDouble(JOptionPane.showInputDialog(null, "Primeiro número:"));
->                 double b = Double.parseDouble(JOptionPane.showInputDialog(null, "Segundo número:"));
->
->                 double resultado = calcular(a, b, op);
->
->                 String simbolo;
->                 switch (op) {
->                     case 0:  simbolo = "+"; break;
->                     case 1:  simbolo = "-"; break;
->                     case 2:  simbolo = "×"; break;
->                     default: simbolo = "÷";
->                 }
->
->                 // HTML: número do resultado em azul e negrito.
->                 String html = String.format(
->                     "<html>Resultado de <b>%.2f %s %.2f</b> = " +
->                     "<font color='#2563eb'><b>%.2f</b></font></html>",
->                     a, simbolo, b, resultado
->                 );
->                 JOptionPane.showMessageDialog(null, html, "Resultado", JOptionPane.INFORMATION_MESSAGE);
->
->             } catch (ArithmeticException e) {
->                 // Divisão por zero → janela de erro (requisito da task).
->                 JOptionPane.showMessageDialog(null, "Não é possível dividir por zero!",
->                     "Erro", JOptionPane.ERROR_MESSAGE);
->             } catch (NumberFormatException e) {
->                 // Usuário digitou algo que não é número (ou cancelou o input).
->                 JOptionPane.showMessageDialog(null, "Digite apenas números válidos!",
->                     "Erro", JOptionPane.ERROR_MESSAGE);
->             }
->         }
->     }
->
->     // Método estático que concentra a lógica das 4 operações.
->     static double calcular(double a, double b, int op) {
->         switch (op) {
->             case 0: return a + b;
->             case 1: return a - b;
->             case 2: return a * b;
->             case 3:
->                 // Com double, a/0 daria "Infinity" — então checamos na mão.
->                 if (b == 0) throw new ArithmeticException("divisão por zero");
->                 return a / b;
->             default: throw new IllegalArgumentException("operação inválida");
->         }
->     }
-> }
-> ```
+### ✅ Solução comentada (exemplo resolvido)
+
+Esta primeira task já vem **resolvida como modelo** — estude o código comentado abaixo e use-o de referência. As próximas tasks (2, 3 e 4) você resolve por conta própria.
+
+```java
+import javax.swing.JOptionPane;
+
+public class CalculadoraGUI {
+    public static void main(String[] args) {
+        // Cada texto vira um botão; o índice do botão é o retorno do diálogo.
+        String[] operacoes = {"Somar", "Subtrair", "Multiplicar", "Dividir", "Sair"};
+
+        while (true) {
+            int op = JOptionPane.showOptionDialog(
+                null,                          // sem janela pai
+                "Escolha a operação:",         // mensagem
+                "Calculadora",                 // título
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,  // ícone de pergunta
+                null,
+                operacoes,                     // os botões
+                operacoes[0]                   // botão em foco
+            );
+
+            // Índice 4 = "Sair"; CLOSED_OPTION = usuário clicou no X.
+            if (op == 4 || op == JOptionPane.CLOSED_OPTION) {
+                JOptionPane.showMessageDialog(null, "Até a próxima! 👋");
+                break;
+            }
+
+            try {
+                // parseDouble converte o texto digitado em número.
+                double a = Double.parseDouble(JOptionPane.showInputDialog(null, "Primeiro número:"));
+                double b = Double.parseDouble(JOptionPane.showInputDialog(null, "Segundo número:"));
+
+                double resultado = calcular(a, b, op);
+
+                String simbolo;
+                switch (op) {
+                    case 0:  simbolo = "+"; break;
+                    case 1:  simbolo = "-"; break;
+                    case 2:  simbolo = "×"; break;
+                    default: simbolo = "÷";
+                }
+
+                // HTML: número do resultado em azul e negrito.
+                String html = String.format(
+                    "<html>Resultado de <b>%.2f %s %.2f</b> = " +
+                    "<font color='#2563eb'><b>%.2f</b></font></html>",
+                    a, simbolo, b, resultado
+                );
+                JOptionPane.showMessageDialog(null, html, "Resultado", JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (ArithmeticException e) {
+                // Divisão por zero → janela de erro (requisito da task).
+                JOptionPane.showMessageDialog(null, "Não é possível dividir por zero!",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            } catch (NumberFormatException e) {
+                // Usuário digitou algo que não é número (ou cancelou o input).
+                JOptionPane.showMessageDialog(null, "Digite apenas números válidos!",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Método estático que concentra a lógica das 4 operações.
+    static double calcular(double a, double b, int op) {
+        switch (op) {
+            case 0: return a + b;
+            case 1: return a - b;
+            case 2: return a * b;
+            case 3:
+                // Com double, a/0 daria "Infinity" — então checamos na mão.
+                if (b == 0) throw new ArithmeticException("divisão por zero");
+                return a / b;
+            default: throw new IllegalArgumentException("operação inválida");
+        }
+    }
+}
+```
 
 ---
 
