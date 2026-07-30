@@ -62,8 +62,8 @@ flowchart LR
         O2["objeto conta2\ntitular = 'Bob'\nsaldo = 500.0\nnumero = 102"]
     end
 
-    CLASSE -->|new ContaBancaria()| O1
-    CLASSE -->|new ContaBancaria()| O2
+    CLASSE -->|"new ContaBancaria()"| O1
+    CLASSE -->|"new ContaBancaria()"| O2
 ```
 
 **Analogia concreta:**
