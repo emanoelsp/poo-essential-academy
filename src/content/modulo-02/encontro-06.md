@@ -1,10 +1,10 @@
-# Encontro 06 — Trabalho Prático 1: Sistema de Reservas de Hotel
+# Encontro 06 — Atividade Prática 1: Sistema de Reservas de Hotel
 
 > **Módulo 2 · 4 aulas · 150 XP · Avaliação**
 
 ---
 
-## Enunciado do Trabalho
+## Enunciado da Atividade
 
 Você recebeu a seguinte especificação de negócio:
 
@@ -16,28 +16,77 @@ Você recebeu a seguinte especificação de negócio:
 
 ### 1.1 Extração dos candidatos
 
-**Substantivos → Classes/Atributos:**
+**Substantivos → Classes / Atributos**
 
-| Substantivo | Papel |
-|-------------|-------|
-| HotelPOO | Contexto do sistema |
-| **quarto** | Classe |
-| número, andar, diária, categoria | Atributos de Quarto |
-| **hóspede** | Classe |
-| nome, CPF, e-mail | Atributos de Hóspede |
-| **reserva** | Classe |
-| check-in, check-out, valor total | Atributos de Reserva |
+A tabela abaixo lista os substantivos encontrados no enunciado. Preencha a coluna **Papel** para cada um.
 
-**Verbos → Métodos:**
+```fill-table
+COL1: Substantivo
+COL2: Papel
+LEGEND: Preencha o papel de cada substantivo. Use: "Classe", "Atributos de Quarto", "Atributos de Hóspede", "Atributos de Reserva" ou "Contexto do sistema".
+HotelPOO | Contexto do sistema
+quarto | Classe
+número, andar, diária, categoria | Atributos de Quarto
+hóspede | Classe
+nome, CPF, e-mail | Atributos de Hóspede
+reserva | Classe
+check-in, check-out, valor total | Atributos de Reserva
+```
 
-| Verbo | Método |
-|-------|--------|
-| calcular valor total | `Reserva.calcularTotal()` |
-| cancelar reserva | `Reserva.cancelar()` |
-| listar reservas ativas | `Hotel.listarReservas()` |
-| calcular receita | `Hotel.calcularReceita()` |
+**Verbos → Métodos**
 
-### 1.2 Diagrama de Classes esperado
+A tabela abaixo lista as ações descritas no enunciado. Preencha a coluna **Método** com a assinatura Java correspondente.
+
+```fill-table
+COL1: Verbo (ação)
+COL2: Método Java
+LEGEND: Escreva o nome do método no formato NomeClasse.nomeMetodo(). Exemplo: "exibir quarto" → Quarto.exibir()
+calcular valor total | Reserva.calcularTotal()
+cancelar reserva | Reserva.cancelar()
+listar reservas ativas | Hotel.listarReservas()
+calcular receita | Hotel.calcularReceita()
+```
+
+### 1.2 Diagrama de Classes — preencha os campos em branco
+
+Complete o diagrama abaixo com os nomes de classes, atributos e métodos que estão faltando.
+
+```fill-uml
+CLASS:Hotel
+ATTR:nome : String
+ATTR:___:reservas : Reserva[]
+ATTR:totalReservas : int
+METHOD:___:fazerReserva(h, q, dias) Reserva
+METHOD:cancelarReserva(numero) void
+METHOD:listarReservas() void
+METHOD:___:calcularReceita() double
+
+CLASS:___:Quarto
+ATTR:numero : int
+ATTR:andar : int
+ATTR:categoria : String
+ATTR:___:diaria : double
+ATTR:disponivel : boolean
+METHOD:exibir() void
+
+CLASS:Hospede
+ATTR:nome : String
+ATTR:___:cpf : String
+ATTR:email : String
+METHOD:exibir() void
+
+CLASS:___:Reserva
+ATTR:numero : int
+ATTR:hospede : Hospede
+ATTR:quarto : Quarto
+ATTR:___:dias : int
+ATTR:ativa : boolean
+METHOD:calcularTotal() double
+METHOD:___:cancelar() void
+METHOD:exibir() void
+```
+
+### 1.3 Diagrama de Classes — referência completa
 
 ```mermaid
 classDiagram
@@ -83,6 +132,8 @@ classDiagram
 
 ## Etapa 2 — Implementação de Referência
 
+> **Dica:** Estude o código abaixo com atenção antes de escrever o seu. Os comentários `// TODO` marcam os trechos que você deve implementar por conta própria.
+
 ```java
 // ──────────────────────────────────────────────────────
 // Classe Quarto
@@ -103,9 +154,9 @@ class Quarto {
     }
 
     void exibir() {
-        String status = disponivel ? "Disponível" : "Ocupado";
-        System.out.printf("[Quarto %03d | %s | Andar %d | R$ %.2f/dia | %s]%n",
-            numero, categoria, andar, diaria, status);
+        // TODO: imprima número, categoria, andar, diária e status (Disponível/Ocupado)
+        //       usando System.out.printf com formatação adequada
+        throw new UnsupportedOperationException("implemente exibir()");
     }
 }
 
@@ -124,7 +175,8 @@ class Hospede {
     }
 
     void exibir() {
-        System.out.printf("[Hóspede: %s | CPF: %s | %s]%n", nome, cpf, email);
+        // TODO: imprima nome, CPF e e-mail do hóspede
+        throw new UnsupportedOperationException("implemente exibir()");
     }
 }
 
@@ -132,7 +184,7 @@ class Hospede {
 // Classe Reserva
 // ──────────────────────────────────────────────────────
 class Reserva {
-    static int contadorNumero = 1; // gerador de número único
+    static int contadorNumero = 1;
 
     int numero;
     Hospede hospede;
@@ -146,21 +198,18 @@ class Reserva {
         this.quarto  = quarto;
         this.dias    = dias;
         this.ativa   = true;
-        quarto.disponivel = false; // ocupa o quarto ao criar a reserva
+        // TODO: marque o quarto como não disponível ao criar a reserva
     }
 
     double calcularTotal() {
-        return quarto.diaria * dias;
+        // TODO: retorne o valor total (diária do quarto × número de dias)
+        throw new UnsupportedOperationException("implemente calcularTotal()");
     }
 
     void cancelar() {
-        if (!ativa) {
-            System.out.println("Reserva #" + numero + " já está cancelada.");
-            return;
-        }
-        ativa = false;
-        quarto.disponivel = true; // libera o quarto
-        System.out.println("Reserva #" + numero + " cancelada. Quarto " + quarto.numero + " liberado.");
+        // TODO: verifique se a reserva já está cancelada (imprima aviso e retorne)
+        //       caso contrário: marque como inativa e libere o quarto (disponivel = true)
+        throw new UnsupportedOperationException("implemente cancelar()");
     }
 
     void exibir() {
@@ -182,34 +231,23 @@ class Hotel {
     int totalReservas;
 
     Hotel(String nome, int capacidadeReservas) {
-        this.nome           = nome;
-        this.reservas       = new Reserva[capacidadeReservas];
-        this.totalReservas  = 0;
+        this.nome          = nome;
+        this.reservas      = new Reserva[capacidadeReservas];
+        this.totalReservas = 0;
     }
 
     Reserva fazerReserva(Hospede hospede, Quarto quarto, int dias) {
-        if (!quarto.disponivel) {
-            System.out.println("Quarto " + quarto.numero + " não está disponível!");
-            return null;
-        }
-        if (dias <= 0) {
-            System.out.println("Número de dias inválido.");
-            return null;
-        }
-        Reserva r = new Reserva(hospede, quarto, dias);
-        reservas[totalReservas++] = r;
-        System.out.println("Reserva #" + r.numero + " criada para " + hospede.nome + ".");
-        return r;
+        // TODO: valide se o quarto está disponível — imprima aviso e retorne null se não estiver
+        // TODO: valide se dias > 0 — imprima aviso e retorne null se inválido
+        // TODO: crie a Reserva, armazene no array e incremente totalReservas
+        // TODO: imprima confirmação e retorne a reserva criada
+        throw new UnsupportedOperationException("implemente fazerReserva()");
     }
 
     void cancelarReserva(int numero) {
-        for (int i = 0; i < totalReservas; i++) {
-            if (reservas[i].numero == numero) {
-                reservas[i].cancelar();
-                return;
-            }
-        }
-        System.out.println("Reserva #" + numero + " não encontrada.");
+        // TODO: percorra o array de reservas procurando pelo número informado
+        //       se encontrar, chame cancelar(); se não encontrar, imprima aviso
+        throw new UnsupportedOperationException("implemente cancelarReserva()");
     }
 
     void listarReservas() {
@@ -226,13 +264,8 @@ class Hotel {
     }
 
     double calcularReceita() {
-        double total = 0;
-        for (int i = 0; i < totalReservas; i++) {
-            if (reservas[i].ativa) {
-                total += reservas[i].calcularTotal();
-            }
-        }
-        return total;
+        // TODO: some o total de todas as reservas ATIVAS e retorne o valor
+        throw new UnsupportedOperationException("implemente calcularReceita()");
     }
 }
 
@@ -258,23 +291,18 @@ public class HotelPOO {
         Reserva r2 = hotel.fazerReserva(bob,   q301, 5);
         Reserva r3 = hotel.fazerReserva(carol, q201, 2);
 
-        // Tentando reservar quarto já ocupado
-        hotel.fazerReserva(alice, q101, 1); // deve falhar
+        // Tentando reservar quarto já ocupado (deve falhar)
+        hotel.fazerReserva(alice, q101, 1);
 
-        // Listando reservas
         hotel.listarReservas();
 
-        // Cancelando uma reserva
+        // Cancelando e re-reservando
         hotel.cancelarReserva(r1.numero);
-
-        // Agora q101 está disponível de novo
         Reserva r4 = hotel.fazerReserva(carol, q101, 1);
 
-        // Estado final
         hotel.listarReservas();
         System.out.printf("Receita total das reservas ativas: R$ %.2f%n", hotel.calcularReceita());
 
-        // Exibindo estado dos quartos
         System.out.println("\n=== STATUS DOS QUARTOS ===");
         q101.exibir();
         q201.exibir();
@@ -313,7 +341,7 @@ Implemente as seguintes melhorias no seu sistema:
 ### Troubleshooting de Revisão — 25 XP
 **Diagnóstico: Bugs no Sistema de Hotel**
 
-Antes de submeter seu TP1, um colega revisou o código e encontrou **3 bugs críticos**. Analise cada trecho, identifique o problema e escreva a correção.
+Antes de submeter sua atividade, um colega revisou o código e encontrou **3 bugs críticos**. Analise cada trecho, identifique o problema e escreva a correção.
 
 **Bug 1 — Reserva criada sem verificar disponibilidade do quarto:**
 ```java
@@ -338,10 +366,9 @@ public void cancelarReserva(String codigo) {
 }
 ```
 
-**Bug 3 — Cálculo de diárias com divisão inteira:**
+**Bug 3 — Cálculo de diárias com lógica errada:**
 ```java
 public double calcularTotal(String dataEntrada, String dataSaida) {
-    // Simulação simplificada: diferença em dias
     int diarias = (int)(dataSaida.length() - dataEntrada.length()); // BUG: lógica errada
     return diarias * quarto.getPrecoDiaria();
 }

@@ -3,6 +3,8 @@
 import React from 'react'
 import { MermaidDiagram } from './MermaidDiagram'
 import { CodeBlock } from './CodeBlock'
+import { parseFillTable } from './FillInTable'
+import { parseFillUML } from './FillInUML'
 import { Lock } from 'lucide-react'
 
 interface ContentRendererProps {
@@ -16,6 +18,14 @@ function parseMermaidAndCode(content: string, showGabarito: boolean): React.Reac
     if (block.startsWith('```mermaid')) {
       const chart = block.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '')
       return <MermaidDiagram key={i} chart={chart} />
+    }
+    if (block.startsWith('```fill-table')) {
+      const src = block.replace(/^```fill-table\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseFillTable(src)}</React.Fragment>
+    }
+    if (block.startsWith('```fill-uml')) {
+      const src = block.replace(/^```fill-uml\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseFillUML(src)}</React.Fragment>
     }
     if (block.startsWith('```')) {
       const firstLine = block.split('\n')[0]
