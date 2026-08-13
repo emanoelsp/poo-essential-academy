@@ -69,28 +69,37 @@ export default function ConteudoAdminPage() {
             <p className="font-semibold">Gabarito Global</p>
             <p className="text-sm text-muted-foreground mt-0.5">
               {globalHidden
-                ? 'Nenhum aluno pode ver gabaritos no momento'
-                : 'Todos os alunos podem ver os gabaritos'}
+                ? 'Nenhum aluno vê gabarito — independente dos encontros abaixo'
+                : 'Gabarito visível, controlado encontro a encontro abaixo'}
             </p>
           </div>
           <Button
-            variant={globalHidden ? 'destructive' : 'outline'}
+            variant={globalHidden ? 'default' : 'destructive'}
             onClick={() => setGlobalHidden((v) => !v)}
             className="gap-2"
           >
-            {globalHidden ? <EyeOff size={15} /> : <Eye size={15} />}
-            {globalHidden ? 'Gabarito Oculto' : 'Gabarito Visível'}
+            {globalHidden ? <Eye size={15} /> : <EyeOff size={15} />}
+            {globalHidden ? 'Mostrar Gabarito' : 'Ocultar Tudo'}
           </Button>
         </CardContent>
       </Card>
 
       {/* Per-encounter overrides */}
       <div>
-        <h2 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wide">
-          Controle por Encontro
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            Controle por Encontro
+          </h2>
+          <button
+            className="text-xs text-primary hover:underline"
+            onClick={() => setHiddenEncounters([])}
+          >
+            Mostrar todos
+          </button>
+        </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Mesmo com gabarito global visível, você pode ocultar encontros específicos.
+          Clique num encontro para alternar entre <strong>Visível</strong> e <strong>Oculto</strong>.
+          Encontros marcados como Oculto ficam bloqueados mesmo com gabarito global visível.
         </p>
         <div className="space-y-1.5">
           {allEncounters.map((e) => {
