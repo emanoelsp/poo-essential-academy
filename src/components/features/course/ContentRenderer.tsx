@@ -3,6 +3,10 @@
 import React from 'react'
 import { MermaidDiagram } from './MermaidDiagram'
 import { CodeBlock } from './CodeBlock'
+import { parseFillTable } from './FillInTable'
+import { parseFillUML } from './FillInUML'
+import { parseRelationshipUML } from './RelationshipUML'
+import { parseCodeTrace } from './CodeTrace'
 import { Lock } from 'lucide-react'
 
 interface ContentRendererProps {
@@ -10,12 +14,56 @@ interface ContentRendererProps {
   showGabarito?: boolean
 }
 
+// Extracts <!-- gabarito-start --> ... <!-- gabarito-end --> blocks.
+// When hidden, replaces with a locked placeholder blockquote.
+// This supports complex gabarito content (mermaid, custom blocks, etc.)
+function extractGabaritoSections(content: string, showGabarito: boolean): string {
+  const START = '<!-- gabarito-start -->'
+  const END = '<!-- gabarito-end -->'
+  if (!content.includes(START)) return content
+
+  const parts = content.split(START)
+  const out: string[] = [parts[0]]
+
+  for (let i = 1; i < parts.length; i++) {
+    const endIdx = parts[i].indexOf(END)
+    if (endIdx === -1) {
+      out.push(parts[i])
+      continue
+    }
+    if (showGabarito) {
+      out.push(parts[i].slice(0, endIdx))
+    } else {
+      out.push('\n> **Gabarito:** oculto pelo professor\n')
+    }
+    out.push(parts[i].slice(endIdx + END.length))
+  }
+
+  return out.join('')
+}
+
 function parseMermaidAndCode(content: string, showGabarito: boolean): React.ReactNode[] {
-  const blocks = content.split(/(```[\s\S]*?```)/g)
+  const blocks = extractGabaritoSections(content, showGabarito).split(/(```[\s\S]*?```)/g)
   return blocks.map((block, i) => {
     if (block.startsWith('```mermaid')) {
       const chart = block.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '')
       return <MermaidDiagram key={i} chart={chart} />
+    }
+    if (block.startsWith('```fill-table')) {
+      const src = block.replace(/^```fill-table\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseFillTable(src)}</React.Fragment>
+    }
+    if (block.startsWith('```fill-uml')) {
+      const src = block.replace(/^```fill-uml\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseFillUML(src)}</React.Fragment>
+    }
+    if (block.startsWith('```relationship-uml')) {
+      const src = block.replace(/^```relationship-uml\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseRelationshipUML(src)}</React.Fragment>
+    }
+    if (block.startsWith('```code-trace')) {
+      const src = block.replace(/^```code-trace\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseCodeTrace(src)}</React.Fragment>
     }
     if (block.startsWith('```')) {
       const firstLine = block.split('\n')[0]

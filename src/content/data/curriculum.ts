@@ -31,7 +31,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-03', number: 3,  title: 'Transição de Paradigma — Classes e Objetos I',     module: 2, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-04', number: 4,  title: 'Gerenciamento de Estado — Classes e Objetos II',   module: 2, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-05', number: 5,  title: 'Engenharia de Requisitos e Modelagem',             module: 2, type: 'teoria',    xp: 50,  exercises: 4 },
-      { slug: 'encontro-06', number: 6,  title: 'Trabalho Prático 1',                               module: 2, type: 'avaliacao', xp: 150, exercises: 1 },
+      { slug: 'encontro-06', number: 6,  title: 'Atividade Prática 1',                              module: 2, type: 'avaliacao', xp: 150, exercises: 1 },
       { slug: 'colecoes-01', number: 0, title: 'Coleções — ArrayList, List e Iteração',             module: 2, type: 'complementar', xp: 60, exercises: 6 },
       { slug: 'colecoes-02', number: 0, title: 'Map, Set e Generics',                               module: 2, type: 'complementar', xp: 60, exercises: 5 },
       {

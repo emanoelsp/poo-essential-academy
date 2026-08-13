@@ -77,17 +77,17 @@ flowchart LR
 O Diagrama de Objetos UML mostra instâncias concretas em um momento específico da execução.
 
 ```mermaid
-classDiagram
-    class `conta1 : ContaBancaria` {
-        titular = "Alice"
-        saldo = 1000.0
-        numero = 101
-    }
-    class `conta2 : ContaBancaria` {
-        titular = "Bob"
-        saldo = 500.0
-        numero = 102
-    }
+flowchart LR
+    subgraph OBJ1["conta1 : ContaBancaria"]
+        A1["titular = 'Alice'"]
+        A2["saldo = 1000.0"]
+        A3["numero = 101"]
+    end
+    subgraph OBJ2["conta2 : ContaBancaria"]
+        B1["titular = 'Bob'"]
+        B2["saldo = 500.0"]
+        B3["numero = 102"]
+    end
 ```
 
 > **Notação:** `nomeDoObjeto : NomeDaClasse` — o sublinhado indica que é uma instância, não uma classe.
@@ -194,8 +194,8 @@ classDiagram
         String titular
         double saldo
         int numero
-        depositar(valor: double) void
-        sacar(valor: double) void
+        depositar(double) void
+        sacar(double) void
         exibirSaldo() void
     }
 ```
