@@ -88,7 +88,7 @@ calcular receita → calcularReceita() | Hotel
 
 As caixas abaixo mostram apenas os **nomes** das classes — atributos e métodos estão ocultos. Para cada par, identifique o tipo de relação e escreva o rótulo correto.
 
-> **Dica:** As relações presentes neste diagrama são: **Composição** (Hotel→Reserva), **Agregação** (Hotel→Quarto), **Associação** (Reserva→Hóspede) e **Associação** (Reserva→Quarto). Escolha o tipo correto para cada par e escreva o rótulo. Símbolos: Associação `────→`, Agregação `◇────→`, Composição `◆────→`.
+> **Dica:** As relações presentes neste diagrama são: 1× **Composição** `◆────→`, 1× **Agregação** `◇────→` e 2× **Associação** `────→`. Para cada par de classes, escolha qual tipo se aplica e escreva o rótulo da relação.
 
 ```relationship-uml
 CLASS:Hotel
