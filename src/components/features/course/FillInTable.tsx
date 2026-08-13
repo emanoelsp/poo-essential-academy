@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import { blockHash, usePersistedState } from '@/hooks/usePersistedState'
 
 interface FillRow {
   visible: string
@@ -13,19 +14,22 @@ interface FillInTableProps {
   col2Header: string
   rows: FillRow[]
   legend?: string
+  blockKey: string
 }
 
 function normalize(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
-function FillCell({ answers }: { answers: string[] }) {
-  const [value, setValue] = useState('')
-  const [state, setState] = useState<'idle' | 'correct' | 'wrong'>('idle')
+function FillCell({ answers, cellKey }: { answers: string[]; cellKey: string }) {
+  const [value, setValue] = usePersistedState<string>(`${cellKey}:v`, '')
+  const [state, setState] = usePersistedState<'idle' | 'correct' | 'wrong'>(`${cellKey}:s`, 'idle')
+
+  const isOpenEnded = answers.length === 1 && answers[0] === '___'
 
   const handleBlur = () => {
     if (!value.trim()) return
-    const ok = answers.some((a) => normalize(a) === normalize(value))
+    const ok = isOpenEnded || answers.some((a) => normalize(a) === normalize(value))
     setState(ok ? 'correct' : 'wrong')
   }
 
@@ -62,7 +66,7 @@ function FillCell({ answers }: { answers: string[] }) {
   )
 }
 
-export function FillInTable({ col1Header, col2Header, rows, legend }: FillInTableProps) {
+export function FillInTable({ col1Header, col2Header, rows, legend, blockKey }: FillInTableProps) {
   return (
     <div className="my-6 space-y-3">
       {legend && (
@@ -87,7 +91,7 @@ export function FillInTable({ col1Header, col2Header, rows, legend }: FillInTabl
               <tr key={i} className="border-t hover:bg-muted/20 transition-colors">
                 <td className="px-4 py-2.5 align-middle font-medium">{row.visible}</td>
                 <td className="px-4 py-2.5 align-middle">
-                  <FillCell answers={row.answers} />
+                  <FillCell answers={row.answers} cellKey={`${blockKey}:r${i}`} />
                 </td>
               </tr>
             ))}
@@ -123,5 +127,13 @@ export function parseFillTable(source: string): React.ReactNode {
     rows.push({ visible, answers })
   }
 
-  return <FillInTable col1Header={col1Header} col2Header={col2Header} rows={rows} legend={legend} />
+  return (
+    <FillInTable
+      col1Header={col1Header}
+      col2Header={col2Header}
+      rows={rows}
+      legend={legend}
+      blockKey={blockHash(source)}
+    />
+  )
 }

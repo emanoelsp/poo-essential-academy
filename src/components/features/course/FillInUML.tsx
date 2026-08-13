@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import { blockHash, usePersistedState } from '@/hooks/usePersistedState'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,16 +22,15 @@ interface UMLClass {
 
 // ── FillInput ─────────────────────────────────────────────────────────────────
 
-function FillInput({ answer, wide }: { answer: string; wide?: boolean }) {
-  const [value, setValue] = useState('')
-  const [state, setState] = useState<'idle' | 'correct' | 'wrong'>('idle')
+function FillInput({ answer, wide, cellKey }: { answer: string; wide?: boolean; cellKey: string }) {
+  const [value, setValue] = usePersistedState<string>(`${cellKey}:v`, '')
+  const [state, setState] = usePersistedState<'idle' | 'correct' | 'wrong'>(`${cellKey}:s`, 'idle')
 
   const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
   const handleBlur = () => {
     if (!value.trim()) return
-    const ok = normalize(value) === normalize(answer)
-    setState(ok ? 'correct' : 'wrong')
+    setState(normalize(value) === normalize(answer) ? 'correct' : 'wrong')
   }
 
   const handleChange = (v: string) => {
@@ -70,12 +70,12 @@ function FillInput({ answer, wide }: { answer: string; wide?: boolean }) {
 
 // ── UML Class Box ─────────────────────────────────────────────────────────────
 
-function UMLClassBox({ cls }: { cls: UMLClass }) {
+function UMLClassBox({ cls, keyPrefix }: { cls: UMLClass; keyPrefix: string }) {
   return (
     <div className="rounded-lg border-2 border-foreground/25 min-w-[230px] overflow-hidden text-xs font-mono shadow-sm bg-background">
       {/* Name */}
       <div className="border-b-2 border-foreground/25 bg-muted/70 px-3 py-2 text-center font-bold text-sm">
-        {cls.nameBlank ? <FillInput answer={cls.nameAnswer} /> : cls.name}
+        {cls.nameBlank ? <FillInput answer={cls.nameAnswer} cellKey={`${keyPrefix}:name`} /> : cls.name}
       </div>
       {/* Attributes */}
       <div className="border-b border-foreground/15 px-3 py-1.5 space-y-1 min-h-[2rem]">
@@ -83,7 +83,7 @@ function UMLClassBox({ cls }: { cls: UMLClass }) {
           <div key={i} className="leading-5 flex items-center gap-1">
             <span className="text-muted-foreground select-none">+</span>
             {a.blank
-              ? <FillInput answer={a.answer} wide />
+              ? <FillInput answer={a.answer} wide cellKey={`${keyPrefix}:a${i}`} />
               : <span>{a.text}</span>
             }
           </div>
@@ -95,7 +95,7 @@ function UMLClassBox({ cls }: { cls: UMLClass }) {
           <div key={i} className="leading-5 flex items-center gap-1">
             <span className="text-muted-foreground select-none">+</span>
             {m.blank
-              ? <FillInput answer={m.answer} wide />
+              ? <FillInput answer={m.answer} wide cellKey={`${keyPrefix}:m${i}`} />
               : <span>{m.text}</span>
             }
           </div>
@@ -107,7 +107,7 @@ function UMLClassBox({ cls }: { cls: UMLClass }) {
 
 // ── FillInUML ─────────────────────────────────────────────────────────────────
 
-export function FillInUML({ classes }: { classes: UMLClass[] }) {
+export function FillInUML({ classes, blockKey }: { classes: UMLClass[]; blockKey: string }) {
   return (
     <div className="my-6 space-y-3">
       <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
@@ -120,7 +120,7 @@ export function FillInUML({ classes }: { classes: UMLClass[] }) {
       <div className="overflow-x-auto pb-2">
         <div className="flex flex-wrap gap-4 min-w-max">
           {classes.map((cls, i) => (
-            <UMLClassBox key={i} cls={cls} />
+            <UMLClassBox key={i} cls={cls} keyPrefix={`${blockKey}:c${i}`} />
           ))}
         </div>
       </div>
@@ -185,5 +185,5 @@ export function parseFillUML(source: string): React.ReactNode {
 
   pushCurrent()
 
-  return <FillInUML classes={classes} />
+  return <FillInUML classes={classes} blockKey={blockHash(source)} />
 }
