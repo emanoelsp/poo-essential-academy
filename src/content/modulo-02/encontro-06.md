@@ -4,16 +4,35 @@
 
 ---
 
+## Enunciado da Atividade
+
+Você recebeu a seguinte especificação de negócio:
+
+> *"O HotelPOO precisa de um sistema para gerenciar suas reservas. O hotel possui quartos de diferentes categorias (Standard, Superior e Luxo), cada um com número, andar e diária. Um hóspede tem nome, CPF e e-mail. Uma reserva associa um hóspede a um quarto por um período determinado (check-in e check-out em dias), calcula o valor total e pode ser cancelada. O sistema deve conseguir listar todas as reservas ativas e calcular a receita total do período."*
+
+---
+
 ## Fase 0 — Planejamento com Story Points (10 min)
 
-Antes de escrever uma linha de código, engenheiros de software **estimam o esforço** de cada tarefa. Isso é chamado de *planning poker* / *story points*. Não existe resposta certa — o objetivo é pensar sobre a complexidade antes de mergulhar.
+Story Points são uma técnica usada por times de desenvolvimento ágil para **estimar o esforço relativo** de cada tarefa — não o tempo em horas, mas a *complexidade percebida*. A escala segue a sequência de Fibonacci: **1, 2, 3, 5, 8** (e às vezes 13).
 
-**Preencha sua estimativa agora** (você vai comparar com a realidade no final):
+**Por que Fibonacci?** Porque conforme as tarefas ficam maiores, nossa incerteza cresce. A diferença entre 1 e 2 é precisa; a diferença entre 8 e 13 já carrega uma margem de erro natural — e a escala reflete isso.
+
+**Como usar:**
+- **1** → trivial, menos de 5 minutos, já fiz isso antes
+- **2** → fácil, sei exatamente o que fazer
+- **3** → médio, preciso pensar um pouco
+- **5** → complexo, tem partes que não tenho certeza
+- **8** → muito complexo, pode ter surpresas, depende de entender outras partes primeiro
+
+A estimativa é feita **antes de começar**, sem consultar nada — o objetivo não é acertar, é **forçar você a pensar sobre a complexidade antes de mergulhar**. No final da atividade você compara o que estimou com o que realmente viveu (Fase 5), e isso é onde o aprendizado acontece.
+
+**Preencha sua estimativa agora, antes de ler qualquer etapa:**
 
 ```fill-table
 COL1: Fase da Atividade
 COL2: Minha Estimativa (1 / 2 / 3 / 5 / 8)
-LEGEND: 1 = trivial, 2 = fácil, 3 = médio, 5 = complexo, 8 = muito complexo. Preencha ANTES de começar cada fase.
+LEGEND: Preencha com 1, 2, 3, 5 ou 8. Não existe resposta certa — o que importa é você pensar sobre a complexidade antes de começar.
 Analisar o enunciado e extrair classes | ___
 Mapear as relações entre as classes | ___
 Completar o diagrama UML | ___
@@ -24,15 +43,7 @@ Implementar a classe Hotel (o orquestrador) | ___
 Testar todos os cenários do main | ___
 ```
 
-> **Dica:** Guarde suas estimativas — você vai usar esse número de novo na Fase 5.
-
----
-
-## Enunciado da Atividade
-
-Você recebeu a seguinte especificação de negócio:
-
-> *"O HotelPOO precisa de um sistema para gerenciar suas reservas. O hotel possui quartos de diferentes categorias (Standard, Superior e Luxo), cada um com número, andar e diária. Um hóspede tem nome, CPF e e-mail. Uma reserva associa um hóspede a um quarto por um período determinado (check-in e check-out em dias), calcula o valor total e pode ser cancelada. O sistema deve conseguir listar todas as reservas ativas e calcular a receita total do período."*
+> **Importante:** Anote suas estimativas e **não as altere** depois que começar cada fase. A comparação final só tem valor se os números forem honestos.
 
 ---
 
