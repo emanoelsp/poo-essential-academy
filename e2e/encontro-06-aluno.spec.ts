@@ -85,9 +85,8 @@ test('Aluno resolve o Encontro 06 completo', async ({ page }) => {
     await fillNext(page, [
       'Contexto do sistema', 'Classe', 'Atributos de Quarto',
       'Classe', 'Atributos de Hóspede', 'Classe', 'Atributos de Reserva',
-      // verbos
-      'Reserva.calcularTotal()', 'Reserva.cancelar()',
-      'Hotel.listarReservas()', 'Hotel.calcularReceita()',
+      // verbos → agora o aluno preenche só a classe
+      'Reserva', 'Reserva', 'Hotel', 'Hotel',
     ])
   })
 

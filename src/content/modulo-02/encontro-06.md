@@ -70,16 +70,16 @@ check-in, check-out, valor total | Atributos de Reserva
 
 **Verbos → Métodos**
 
-A tabela abaixo lista as ações descritas no enunciado. Preencha a coluna **Método** com a assinatura Java correspondente.
+A tabela abaixo mostra os métodos identificados no sistema. Preencha com o nome da **classe Java** responsável por cada método.
 
 ```fill-table
-COL1: Verbo (ação)
-COL2: Método Java
-LEGEND: Escreva o nome do método no formato NomeClasse.nomeMetodo(). Exemplo: "exibir quarto" → Quarto.exibir()
-calcular valor total | Reserva.calcularTotal()
-cancelar reserva | Reserva.cancelar()
-listar reservas ativas | Hotel.listarReservas()
-calcular receita | Hotel.calcularReceita()
+COL1: Verbo (ação) → método
+COL2: Classe responsável
+LEGEND: Os métodos do sistema são: calcularTotal(), cancelar(), listarReservas(), calcularReceita(). Escreva apenas o nome da classe Java que deve implementar cada método (Quarto, Hospede, Reserva ou Hotel).
+calcular valor total → calcularTotal() | Reserva
+cancelar reserva → cancelar() | Reserva
+listar reservas ativas → listarReservas() | Hotel
+calcular receita → calcularReceita() | Hotel
 ```
 
 ---
