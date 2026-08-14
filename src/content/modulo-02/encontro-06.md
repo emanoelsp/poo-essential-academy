@@ -233,12 +233,12 @@ VAR:total:double:{total}
 
 ### 2.2 Preveja o comportamento em casos extremos
 
-Para cada chamada abaixo, preencha **o que deveria acontecer** se a implementação estiver correta.
+Para cada chamada abaixo, escolha na lista da dica **qual frase de retorno** se aplica e escreva no campo correto.
 
 ```fill-table
 COL1: Chamada
 COL2: Retorno / Efeito esperado
-LEGEND: Descreva o comportamento em poucas palavras. Pense nas validações que os TODO comments pedem.
+LEGEND: Frases possíveis (cada uma é usada uma vez): "retorna null + imprime aviso de dias inválido" · "retorna null + imprime aviso de quarto indisponível" · "imprime aviso de reserva não encontrada" · "segunda chamada imprime aviso e retorna sem alterar". Analise cada chamada e coloque a frase certa no campo correspondente.
 hotel.fazerReserva(alice, q101, 0) | retorna null + imprime aviso de dias inválido
 hotel.fazerReserva(alice, q101, -5) | retorna null + imprime aviso de dias inválido
 hotel.fazerReserva(alice, q101, 3) quando q101 já está ocupado | retorna null + imprime aviso de quarto indisponível
