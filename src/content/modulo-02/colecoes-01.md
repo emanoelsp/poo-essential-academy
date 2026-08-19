@@ -24,6 +24,22 @@ System.out.println(produtos.size()); // 0
 
 ---
 
+```mermaid
+flowchart LR
+    subgraph FIXED["Array fixo — new Produto[4]"]
+        direction LR
+        F0["[0]\nTeclado"] --- F1["[1]\nMouse"] --- F2["[2]\n∅ vazio"] --- F3["[3]\n∅ vazio"]
+    end
+    subgraph DYN["ArrayList — sem limite fixo"]
+        direction LR
+        D0["[0]\nTeclado"] --- D1["[1]\nMouse"] --- D2["[2]\nMonitor"] --- DMORE["[...]\ngrowing..."]
+    end
+    FIXED -->|"5º elemento"| BOOM["💥 ArrayIndexOutOfBoundsException"]
+    DYN -->|"5º elemento"| OK["✓ cresce automaticamente"]
+```
+
+---
+
 ## 1. ArrayList — a lista mais usada
 
 `ArrayList<E>` é uma lista baseada em array interno que cresce automaticamente. O `<E>` é o tipo dos elementos — isso é **Generics**.
@@ -57,6 +73,40 @@ nomes.clear();              // limpa tudo
 String[] arr = nomes.toArray(new String[0]);
 ```
 
+**`add(index, element)` — elementos deslocam para a direita:**
+
+```mermaid
+flowchart TB
+    subgraph ANTES["Antes"]
+        direction LR
+        A0["[0]\nAna"] --- A1["[1]\nBruno"] --- A2["[2]\nCarlos"]
+    end
+    OP["nomes.add(1, 'Beatriz')"]
+    subgraph DEPOIS["Depois"]
+        direction LR
+        D0["[0]\nAna"] --- D1["[1]\nBeatriz 🆕"] --- D2["[2]\nBruno →"] --- D3["[3]\nCarlos →"]
+    end
+    ANTES --> OP --> DEPOIS
+```
+
+**`remove(element)` — elementos deslocam para a esquerda:**
+
+```mermaid
+flowchart TB
+    subgraph ANTES2["Antes"]
+        direction LR
+        R0["[0]\nAna ❌"] --- R1["[1]\nBruno"] --- R2["[2]\nCarlos"]
+    end
+    OP2["nomes.remove('Ana')"]
+    subgraph DEPOIS2["Depois"]
+        direction LR
+        S0["[0]\nBruno ←"] --- S1["[1]\nCarlos ←"]
+    end
+    ANTES2 --> OP2 --> DEPOIS2
+```
+
+> **Custo O(n):** inserir ou remover no meio da lista obriga o Java a deslocar todos os elementos seguintes — quanto maior a lista, mais trabalho. Para inserções frequentes no meio, considere `LinkedList`.
+
 ---
 
 ## 2. A Interface List — programe para a abstração
@@ -72,6 +122,31 @@ List<String> nomes = new ArrayList<>();
 
 // Se um dia quiser trocar para LinkedList, só muda uma linha:
 // List<String> nomes = new LinkedList<>();
+```
+
+```mermaid
+classDiagram
+    direction LR
+    class List {
+        <<interface>>
+        +add(element) void
+        +remove(index) void
+        +get(index) E
+        +size() int
+        +contains(obj) boolean
+    }
+    class ArrayList {
+        array interno redimensionável
+        get/set O(1)
+        add-remove no meio O(n)
+    }
+    class LinkedList {
+        nós duplamente encadeados
+        add-remove extremo O(1)
+        get(índice) O(n)
+    }
+    List <|.. ArrayList : implements
+    List <|.. LinkedList : implements
 ```
 
 > **Por que isso importa?** Métodos que aceitam `List<E>` funcionam com qualquer implementação (ArrayList, LinkedList, etc.). Métodos que aceitam `ArrayList<E>` ficam presos a uma implementação específica — isso viola o DIP (Módulo 6).
@@ -122,6 +197,38 @@ while (it.hasNext()) {
 frutas.forEach(f -> System.out.println(f.toUpperCase()));
 // ou ainda mais curto com method reference:
 frutas.forEach(System.out::println);
+```
+
+**Quando usar cada forma:**
+
+```mermaid
+flowchart TD
+    Q0["Precisa iterar\numa List?"] --> Q1{"Precisa do\níndice numérico?"}
+    Q1 -->|Sim| FOR_I["for clássico com índice\nfor(int i=0; i&lt;list.size(); i++)"]
+    Q1 -->|Não| Q2{"Precisa remover\ndurante a iteração?"}
+    Q2 -->|Sim| ITER["Iterator\nit.remove()"]
+    Q2 -->|Não| Q3{"Prefere sintaxe\nfuncional?"}
+    Q3 -->|Sim| LAMBDA["forEach + lambda\nlist.forEach(e -&gt; ...)"]
+    Q3 -->|Não| FOREACH["for-each simples\nfor(E e : list)"]
+```
+
+**Por que `Iterator.remove()` é seguro e `for-each` não:**
+
+```mermaid
+flowchart LR
+    subgraph DANGER["❌ for-each com remove"]
+        direction TB
+        DE1["for(String f : frutas)"] --> DE2["frutas.remove(f)"]
+        DE2 --> DE3["💥 ConcurrentModificationException"]
+    end
+    subgraph SAFE["✓ Iterator com remove"]
+        direction TB
+        S1["Iterator it = frutas.iterator()"] --> S2{"it.hasNext()?"}
+        S2 -->|sim| S3["f = it.next()"]
+        S3 --> S4["it.remove() — seguro"]
+        S4 --> S2
+        S2 -->|não| S5["fim, sem erros"]
+    end
 ```
 
 > **Erro clássico**: remover elementos de uma lista com for-each normal causa `ConcurrentModificationException`. Use sempre o `Iterator` quando precisar remover durante a iteração.

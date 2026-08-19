@@ -40,6 +40,35 @@ alunos.remove("2024003");
 System.out.println(alunos.size()); // 2
 ```
 
+**Como o HashMap funciona internamente — array de buckets com acesso O(1):**
+
+```mermaid
+flowchart LR
+    subgraph OPS["Operações"]
+        P["put('2024001', 'Ana')"]
+        G["get('2024001')"]
+    end
+    subgraph HASH["hashCode() % capacidade"]
+        H1["'2024001' → hash → bucket[3]"]
+        H2["'2024002' → hash → bucket[7]"]
+        H3["'2024003' → hash → bucket[1]"]
+    end
+    subgraph BUCKETS["Array interno de buckets"]
+        direction TB
+        B1["[1] '2024003' → 'Carlos'"]
+        B2["[3] '2024001' → 'Ana' ✓"]
+        B3["[7] '2024002' → 'Bruno'"]
+        B4["[...] ∅"]
+    end
+    P --> H1
+    G -->|"mesmo hashCode = mesmo bucket"| B2
+    H1 --> B2
+    H2 --> B3
+    H3 --> B1
+```
+
+> **Por que O(1)?** A chave passa por `hashCode()` que aponta direto para o bucket — não há varredura. Colisões (dois keys no mesmo bucket) degradam para O(n) no pior caso, mas são raras com uma boa função hash.
+
 ### Iterando sobre HashMap
 
 ```java
@@ -103,6 +132,33 @@ Map<String, Integer> alfabetico = new TreeMap<>(ranking); // copia e ordena
 // Itera em ordem alfabética: Ana, Bruno, Carlos
 ```
 
+**Mesmos dados — três ordenações diferentes:**
+
+```mermaid
+flowchart TB
+    subgraph INSERT["Inserção: Ana(95) → Bruno(87) → Carlos(92)"]
+        direction LR
+        I1["Ana"] --- I2["Bruno"] --- I3["Carlos"]
+    end
+    INSERT --> HM
+    INSERT --> LHM
+    INSERT --> TM
+    subgraph HM["HashMap — ordem não garantida"]
+        direction LR
+        H1["Carlos"] --- H2["Ana"] --- H3["Bruno"]
+    end
+    subgraph LHM["LinkedHashMap — ordem de inserção"]
+        direction LR
+        L1["Ana"] --- L2["Bruno"] --- L3["Carlos"]
+    end
+    subgraph TM["TreeMap — ordem alfabética da chave"]
+        direction LR
+        T1["Ana"] --- T2["Bruno"] --- T3["Carlos"]
+    end
+```
+
+> **Regra prática:** use `HashMap` por padrão (mais rápido), `LinkedHashMap` quando a ordem de exibição importa, e `TreeMap` quando precisar de ordenação por chave sem chamar `sort()` manualmente.
+
 ---
 
 ## 4. Set — conjunto sem duplicatas
@@ -144,6 +200,27 @@ todos.addAll(turmaB); // {Ana, Bruno, Carlos, Diana, Eduardo}
 // Diferença (em A mas não em B)
 Set<String> somenteA = new HashSet<>(turmaA);
 somenteA.removeAll(turmaB); // {Ana, Carlos}
+```
+
+**As três operações de conjunto visualizadas:**
+
+```mermaid
+flowchart LR
+    subgraph A["turmaA"]
+        A1["Ana"] 
+        A2["Bruno"]
+        A3["Carlos"]
+    end
+    subgraph B["turmaB"]
+        B1["Bruno"]
+        B2["Diana"]
+        B3["Eduardo"]
+    end
+    A -->|"retainAll(B)"| INT["Interseção\n{ Bruno }"]
+    B -->|"retainAll(A)"| INT
+    A -->|"addAll(B)"| UNI["União\n{ Ana, Bruno, Carlos,\nDiana, Eduardo }"]
+    B -->|"addAll(A)"| UNI
+    A -->|"removeAll(B)"| DIF["Diferença A − B\n{ Ana, Carlos }"]
 ```
 
 ### TreeSet — conjunto ordenado
@@ -215,6 +292,34 @@ System.out.println(maior(List.of(3, 1, 4, 1, 5, 9))); // 9
 System.out.println(maior(List.of("banana", "abacaxi", "uva"))); // uva
 ```
 
+**`<T extends Comparable<T>>` — quais tipos são aceitos:**
+
+```mermaid
+flowchart TB
+    COMP["Comparable&lt;T&gt;\n(interface do Java)"]
+    INT["Integer\nimplements Comparable"] 
+    STR["String\nimplements Comparable"]
+    DBL["Double\nimplements Comparable"]
+    PROD["Produto\nimplements Comparable\n(você implementa)"]
+    COMP -.->|implementado por| INT & STR & DBL & PROD
+    subgraph METHOD["maior&lt;T extends Comparable&lt;T&gt;&gt;(List&lt;T&gt;)"]
+        M["aceita List de qualquer T\nque implemente Comparable"]
+    end
+    INT & STR & DBL & PROD -->|"✓ T pode ser"| METHOD
+```
+
+**Wildcard `<?>` — três variações:**
+
+```mermaid
+flowchart LR
+    subgraph WC["Wildcard"]
+        direction TB
+        UB["&lt;?&gt; unbounded\naceita qualquer tipo\nsó leitura — não pode add()"]
+        UE["&lt;? extends Number&gt; upper bound\naceita Number e subclasses\nInteger, Double, Long..."]
+        LB["&lt;? super Integer&gt; lower bound\naceita Integer e superclasses\nNumber, Object..."]
+    end
+```
+
 ### Wildcard — `<?>`
 
 ```java
@@ -248,6 +353,26 @@ somarNumeros(List.of(1.5, 2.5, 3.0));  // aceita List<Double>
 | Conjunto ordenado | `TreeSet<E>` |
 | Fila FIFO | `Queue<E>` / `LinkedList<E>` |
 | Pilha LIFO | `Deque<E>` / `ArrayDeque<E>` |
+
+**Árvore de decisão — escolha a coleção certa:**
+
+```mermaid
+flowchart TD
+    Q0["Qual é o problema?"] --> Q1{"Precisa de\nchave → valor?"}
+    Q1 -->|Sim| Q1A{"Ordem\nimporta?"}
+    Q1A -->|Não| HM["HashMap\nO(1) put/get"]
+    Q1A -->|"ordem de inserção"| LHM["LinkedHashMap"]
+    Q1A -->|"chave ordenada"| TM["TreeMap"]
+    Q1 -->|Não| Q2{"Sem\nduplicatas?"}
+    Q2 -->|Sim| Q2A{"Ordem\nimporta?"}
+    Q2A -->|Não| HS["HashSet\nO(1) add/contains"]
+    Q2A -->|"inserção"| LHS["LinkedHashSet"]
+    Q2A -->|"ordenada"| TS["TreeSet"]
+    Q2 -->|Não| Q3{"Acesso por\níndice?"}
+    Q3 -->|Sim| AL["ArrayList\nget O(1)"]
+    Q3 -->|"inserção frequente\nnos extremos"| LL["ArrayDeque\nfila ou pilha"]
+    Q3 -->|Não| LLIST["LinkedList\nadd extremo O(1)"]
+```
 
 ---
 
