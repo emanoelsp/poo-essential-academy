@@ -8,9 +8,11 @@ import { useGamificationStore } from '@/stores/gamificationStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, Clock, Send, XCircle, ExternalLink } from 'lucide-react'
+import { CheckCircle, Clock, Send, XCircle, ExternalLink, Gamepad2 } from 'lucide-react'
 import type { Encounter, Submission } from '@/types'
 import { createSubmission, watchSubmission } from '@/lib/firestore'
+import { getQuizQuestions } from '@/content/data/quizQuestions'
+import { QuizModal } from '@/components/features/quiz/QuizModal'
 import toast from 'react-hot-toast'
 
 interface EncounterContentProps {
@@ -138,6 +140,8 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
   const showGabarito = isGabaritoVisible(encounter.slug)
   const isChallenge  = encounter.type === 'desafio'
   const isBonus      = encounter.type === 'bonus'
+  const hasQuiz      = getQuizQuestions(encounter.slug).length > 0
+  const [quizOpen, setQuizOpen] = useState(false)
 
   const { isChallengeTaskDone } = useGamificationStore()
   const allTasksDone = isChallenge && encounter.challengeTasks
@@ -181,6 +185,27 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
           xp={encounter.xp}
         />
       )}
+
+      {/* Quiz launcher */}
+      {hasQuiz && (
+        <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 p-6 flex items-center gap-4">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-white/10 flex items-center justify-center">
+            <Gamepad2 size={24} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-white">Quiz Kahoot desta aula</p>
+            <p className="text-white/70 text-sm">O professor vai abrir a sala — entre com o código e compete ao vivo!</p>
+          </div>
+          <Button
+            onClick={() => setQuizOpen(true)}
+            className="shrink-0 bg-white text-violet-900 hover:bg-white/90 font-bold"
+          >
+            Entrar na Sala
+          </Button>
+        </div>
+      )}
+
+      {quizOpen && <QuizModal slug={encounter.slug} onClose={() => setQuizOpen(false)} />}
 
       <div className="flex flex-col items-center gap-3 pt-6 border-t">
         {completed ? (

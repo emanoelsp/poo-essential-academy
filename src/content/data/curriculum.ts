@@ -55,9 +55,9 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-07', number: 7,  title: 'Princípio da Ocultação de Informação — Encapsulamento I', module: 3, type: 'teoria', xp: 50,  exercises: 5 },
       { slug: 'encontro-08', number: 8,  title: 'Invariantes de Classe — Encapsulamento II',               module: 3, type: 'teoria', xp: 50,  exercises: 5 },
       { slug: 'encontro-09', number: 9,  title: 'Revisão Geral e Laboratório de Fixação',                  module: 3, type: 'lab',    xp: 50,  exercises: 8 },
-      { slug: 'encontro-10', number: 10, title: 'Avaliação Objetiva',                                       module: 3, type: 'prova',  xp: 150, exercises: 0 },
       { slug: 'excecoes-01', number: 0,  title: 'Hierarquia de Exceções — checked vs unchecked',            module: 3, type: 'complementar', xp: 60, exercises: 5 },
       { slug: 'excecoes-02', number: 0,  title: 'Exceções de Domínio e Custom Exceptions',                  module: 3, type: 'complementar', xp: 60, exercises: 5 },
+      { slug: 'encontro-10', number: 10, title: 'Avaliação Objetiva',                                       module: 3, type: 'prova',  xp: 150, exercises: 0 },
       {
         slug: 'desafio-m03', number: 0, title: '⚔️ Desafio do Módulo 3 — JOptionPane + Encapsulamento',    module: 3, type: 'desafio', xp: 160, exercises: 0,
         challengeTasks: [

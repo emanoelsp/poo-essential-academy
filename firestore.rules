@@ -89,6 +89,24 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Quiz sessions: admins create/update; authenticated users read
+    match /quizSessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create, update: if isAdmin();
+
+      // Players: any authenticated user can join/update their own player doc
+      match /players/{playerId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null;
+      }
+
+      // Answers: any authenticated user can submit answers
+      match /answers/{answerId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+      }
+    }
+
     function isAdmin() {
       return request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&

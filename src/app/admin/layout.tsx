@@ -13,6 +13,7 @@ import {
   Sword,
   ChevronRight,
   ShieldCheck,
+  Gamepad2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePathname } from 'next/navigation'
@@ -23,6 +24,7 @@ const NAV = [
   { href: '/admin/conteudo',  label: 'Gabarito',    icon: BookOpen        },
   { href: '/admin/validacoes',label: 'Validações',  icon: Sword           },
   { href: '/admin/alunos',    label: 'Alunos',      icon: Users           },
+  { href: '/admin/quiz',      label: 'Quiz',        icon: Gamepad2        },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
