@@ -361,24 +361,26 @@ export default function AdminQuizPage() {
       const s = await createQuizSession(slug, profile.uid)
       setSession(s)
       toast.success('Sala criada!')
-    } catch { toast.error('Erro ao criar sala.') }
-    finally { setCreating(false) }
+    } catch (err) {
+      console.error('[Quiz] Erro ao criar sala:', err)
+      toast.error('Erro ao criar sala.')
+    } finally { setCreating(false) }
   }
 
   const handleStart = async () => {
     if (!session) return
-    try { await startQuiz(session.id) } catch { toast.error('Erro ao iniciar.') }
+    try { await startQuiz(session.id) } catch (err) { console.error('[Quiz] Erro ao iniciar:', err); toast.error('Erro ao iniciar.') }
   }
 
   const handleReveal = async () => {
     if (!session) return
-    try { await revealQuestion(session.id) } catch { toast.error('Erro ao revelar.') }
+    try { await revealQuestion(session.id) } catch (err) { console.error('[Quiz] Erro ao revelar:', err); toast.error('Erro ao revelar.') }
   }
 
   const handleNext = async () => {
     if (!session) return
     const next = session.currentQuestion + 1
-    try { await nextQuestion(session.id, next, session.totalQuestions) } catch { toast.error('Erro.') }
+    try { await nextQuestion(session.id, next, session.totalQuestions) } catch (err) { console.error('[Quiz] Erro ao avançar:', err); toast.error('Erro ao avançar questão.') }
   }
 
   const handleReset = () => setSession(null)
