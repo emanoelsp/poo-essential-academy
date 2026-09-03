@@ -143,6 +143,28 @@ flowchart LR
 
 > **Regra**: ordene os `catch` do mais específico ao mais geral. Se colocar `catch (Exception e)` primeiro, os demais blocos nunca executam (erro de compilação).
 
+#### ⚠️ Gotcha: finally com return
+
+O `finally` executa **mesmo quando o `try` tem um `return`**. Rastreie a execução abaixo:
+
+```java
+public int contarAte() {
+    try {
+        System.out.println("1 — entrando no try");
+        return 42;                             // ← return aqui...
+    } finally {
+        System.out.println("2 — finally executa ANTES de retornar");
+        // Se houvesse return aqui, SUBSTITUIRIA o 42 — evite isso
+    }
+}
+// Saída:
+// 1 — entrando no try
+// 2 — finally executa ANTES de retornar
+// (retorna 42)
+```
+
+> **Dica**: nunca coloque `return` dentro do `finally` — ele sobrescreve o return do `try` e engole qualquer exceção em andamento. Use `finally` só para limpeza de recursos.
+
 ---
 
 ## 3. Multi-catch — Java 7+
@@ -227,6 +249,27 @@ try (BufferedReader br = new BufferedReader(new FileReader("arquivo.txt"))) {
 // br.close() é chamado automaticamente aqui — mesmo se houve exceção
 ```
 
+#### Múltiplos recursos
+
+Você pode declarar mais de um recurso — eles abrem na ordem declarada e fecham na **ordem inversa**:
+
+```java
+// Copiar arquivo linha a linha: abre entrada → abre saída → usa → fecha saída → fecha entrada
+try (
+    BufferedReader entrada = new BufferedReader(new FileReader("origem.txt"));
+    BufferedWriter saida   = new BufferedWriter(new FileWriter("destino.txt"))
+) {
+    String linha;
+    while ((linha = entrada.readLine()) != null) {
+        saida.write(linha);
+        saida.newLine();
+    }
+} catch (IOException e) {
+    System.err.println("Erro de I/O: " + e.getMessage());
+}
+// saida.close() primeiro, depois entrada.close() — garantido pela JVM
+```
+
 ---
 
 ## 5. getMessage(), getClass(), printStackTrace()
@@ -267,6 +310,20 @@ try {
     String stackTrace = sw.toString();
 }
 ```
+
+#### Como ler um stack trace
+
+Quando um programa explode, o Java imprime um stack trace. Saber ler é habilidade fundamental:
+
+```
+Exception in thread "main"              ← (1) thread onde explodiu
+java.lang.ArithmeticException: / by zero ← (2) tipo da exceção + mensagem
+    at Calculadora.dividir(Calculadora.java:12)  ← (3) método + arquivo + linha que lançou
+    at Calculadora.calcular(Calculadora.java:7)  ← (4) quem chamou dividir()
+    at Main.main(Main.java:3)                    ← (5) ponto de entrada — leia de baixo pra cima
+```
+
+**Estratégia de leitura**: comece pela linha mais alta do seu código (geralmente a de número mais baixo da pilha). Ignore as linhas de bibliotecas externas — foque nas do seu pacote.
 
 ---
 
@@ -318,6 +375,34 @@ public void lerArquivoCritico(String path) throws IOException {
 > | Parâmetro que não deveria ser null | `NullPointerException` ou verificar antes |
 > | Índice fora do intervalo | `IndexOutOfBoundsException` |
 > | Operação não suportada | `UnsupportedOperationException` |
+
+#### Exception chaining — preservando a causa original
+
+Ao relançar uma exceção em uma camada diferente, **sempre** passe a causa original como segundo argumento. Do contrário, o stack trace original desaparece e o diagnóstico de produção vira um pesadelo:
+
+```java
+// ❌ Sem chaining — perde a causa real
+try {
+    Files.readString(Path.of("config.json"));
+} catch (IOException e) {
+    throw new RuntimeException("Falha ao carregar configuração"); // IOException sumiu!
+}
+
+// ✅ Com chaining — preserva a causa original
+try {
+    Files.readString(Path.of("config.json"));
+} catch (IOException e) {
+    throw new RuntimeException("Falha ao carregar configuração", e); // IOException encadeada
+}
+
+// Quem captura pode inspecionar a causa:
+try {
+    carregarConfig();
+} catch (RuntimeException e) {
+    Throwable causa = e.getCause();          // recupera o IOException original
+    System.err.println("Causa raiz: " + causa.getMessage());
+}
+```
 
 ---
 
@@ -390,6 +475,26 @@ try {
     System.err.println("Entrada inválida: " + e.getMessage());
 }
 ```
+
+#### Princípio "Tell, Don't Ask" — Diga, não pergunte
+
+Exceções são a consequência natural deste princípio: **diga ao objeto o que fazer** e deixe-o validar e lançar. Não pergunte o estado antes de decidir:
+
+```java
+// ❌ "Ask" — o chamador pergunta o estado e decide
+if (conta.getSaldo() >= valor) {   // regra de negócio vazou para fora da classe
+    conta.sacar(valor);
+}
+
+// ✅ "Tell" — o chamador manda, a classe valida e lança se necessário
+try {
+    conta.sacar(valor);            // ContaBancaria decide e explode se inválido
+} catch (IllegalStateException e) {
+    System.err.println(e.getMessage());
+}
+```
+
+A classe se torna a **única fonte de verdade** sobre suas próprias regras. Se a regra mudar, você muda em um único lugar.
 
 ---
 
