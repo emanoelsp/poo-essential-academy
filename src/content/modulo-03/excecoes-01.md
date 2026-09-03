@@ -435,6 +435,9 @@ public class Processador {
 
 ---
 
+```quiz-launcher
+```
+
 ## Exercícios
 
 **Exercício 1** — Converta o seguinte código para usar try-with-resources e trate `IOException` adequadamente (não silenciosamente):

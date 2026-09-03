@@ -1,17 +1,44 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { MermaidDiagram } from './MermaidDiagram'
 import { CodeBlock } from './CodeBlock'
 import { parseFillTable } from './FillInTable'
 import { parseFillUML } from './FillInUML'
 import { parseRelationshipUML } from './RelationshipUML'
 import { parseCodeTrace } from './CodeTrace'
-import { Lock } from 'lucide-react'
+import { QuizModal } from '@/components/features/quiz/QuizModal'
+import { getQuizQuestions } from '@/content/data/quizQuestions'
+import { Lock, Gamepad2 } from 'lucide-react'
 
 interface ContentRendererProps {
   content: string
   showGabarito?: boolean
+  encounterSlug?: string
+}
+
+function QuizLauncherInline({ slug }: { slug: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="my-6 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 p-5 flex items-center gap-4">
+        <div className="h-11 w-11 shrink-0 rounded-xl bg-white/10 flex items-center justify-center">
+          <Gamepad2 size={22} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-white">Quiz Interativo desta aula</p>
+          <p className="text-white/70 text-sm">O professor abre a sala — entre com o código e compita ao vivo!</p>
+        </div>
+        <button
+          onClick={() => setOpen(true)}
+          className="shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-bold text-violet-900 hover:bg-white/90 transition"
+        >
+          Entrar na Sala
+        </button>
+      </div>
+      {open && <QuizModal slug={slug} onClose={() => setOpen(false)} />}
+    </>
+  )
 }
 
 // Extracts <!-- gabarito-start --> ... <!-- gabarito-end --> blocks.
@@ -42,12 +69,18 @@ function extractGabaritoSections(content: string, showGabarito: boolean): string
   return out.join('')
 }
 
-function parseMermaidAndCode(content: string, showGabarito: boolean): React.ReactNode[] {
+function parseMermaidAndCode(content: string, showGabarito: boolean, encounterSlug?: string): React.ReactNode[] {
   const blocks = extractGabaritoSections(content, showGabarito).split(/(```[\s\S]*?```)/g)
   return blocks.map((block, i) => {
     if (block.startsWith('```mermaid')) {
       const chart = block.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '')
       return <MermaidDiagram key={i} chart={chart} />
+    }
+    if (block.startsWith('```quiz-launcher')) {
+      if (encounterSlug && getQuizQuestions(encounterSlug).length > 0) {
+        return <QuizLauncherInline key={i} slug={encounterSlug} />
+      }
+      return null
     }
     if (block.startsWith('```fill-table')) {
       const src = block.replace(/^```fill-table\n?/, '').replace(/\n?```$/, '')
@@ -371,13 +404,13 @@ function stripHiddenGabaritos(content: string): string {
   return out.join('\n')
 }
 
-export function ContentRenderer({ content, showGabarito = true }: ContentRendererProps) {
+export function ContentRenderer({ content, showGabarito = true, encounterSlug }: ContentRendererProps) {
   // When hidden, remove gabarito blocks at the source so neither their text nor
   // any embedded code can leak through the renderer.
   const source = showGabarito ? content : stripHiddenGabaritos(content)
   return (
     <article className="max-w-none space-y-0">
-      {parseMermaidAndCode(source, showGabarito)}
+      {parseMermaidAndCode(source, showGabarito, encounterSlug)}
     </article>
   )
 }
