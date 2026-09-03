@@ -72,6 +72,10 @@ export function comboLabel(combo: number): string | null {
   return null
 }
 
+// Buffer adicionado ao timestamp de início para dar tempo ao Firestore propagar
+// o update para todos os clientes antes que o timer comece a correr.
+const PROPAGATION_BUFFER_MS = 3500
+
 // ─── Code generation ──────────────────────────────────────────────────────────
 
 function generateCode(): string {
@@ -133,7 +137,7 @@ export async function startQuiz(sessionId: string): Promise<void> {
   await updateDoc(doc(db, 'quizSessions', sessionId), {
     status: 'question',
     currentQuestion: 0,
-    questionStartedAt: Date.now(),
+    questionStartedAt: Date.now() + PROPAGATION_BUFFER_MS,
   })
 }
 
@@ -150,7 +154,7 @@ export async function nextQuestion(sessionId: string, nextIndex: number, total: 
     await updateDoc(doc(db, 'quizSessions', sessionId), {
       status: 'question',
       currentQuestion: nextIndex,
-      questionStartedAt: Date.now(),
+      questionStartedAt: Date.now() + PROPAGATION_BUFFER_MS,
     })
   }
 }

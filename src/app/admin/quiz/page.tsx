@@ -37,12 +37,21 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 function useTimer(startedAt: number | null, duration: number) {
   const [remaining, setRemaining] = useState(duration)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (startedAt == null) { setRemaining(duration); return }
+    if (startedAt == null) { setRemaining(duration); setCountdown(null); return }
     const tick = () => {
-      const elapsed = (Date.now() - startedAt) / 1000
+      const now = Date.now()
+      if (now < startedAt) {
+        setCountdown(Math.ceil((startedAt - now) / 1000))
+        setRemaining(duration)
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+      setCountdown(null)
+      const elapsed = (now - startedAt) / 1000
       const left = Math.max(0, duration - elapsed)
       setRemaining(left)
       if (left > 0) rafRef.current = requestAnimationFrame(tick)
@@ -51,7 +60,7 @@ function useTimer(startedAt: number | null, duration: number) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [startedAt, duration])
 
-  return remaining
+  return { remaining, countdown }
 }
 
 // ─── Encounter selector ───────────────────────────────────────────────────────
@@ -153,7 +162,7 @@ function QuestionView({
 }) {
   const questions = getQuizQuestions(session.slug)
   const q = questions[session.currentQuestion]
-  const remaining = useTimer(session.questionStartedAt, QUESTION_TIME)
+  const { remaining, countdown } = useTimer(session.questionStartedAt, QUESTION_TIME)
 
   const progress = remaining / QUESTION_TIME
   const timerColor = remaining > 10 ? 'text-green-600' : remaining > 5 ? 'text-amber-600' : 'text-red-600'
@@ -165,13 +174,16 @@ function QuestionView({
 
   return (
     <div className="space-y-4">
-      {/* Progress */}
+      {/* Progress / countdown */}
       <div className="flex items-center gap-3">
         <span className="text-sm text-muted-foreground">{session.currentQuestion + 1}/{session.totalQuestions}</span>
         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
+          <div className="h-full bg-primary rounded-full transition-all" style={{ width: countdown !== null ? 100 : progress * 100 + '%' }} />
         </div>
-        <span className={cn('font-bold tabular-nums text-sm', timerColor)}>{Math.ceil(remaining)}s</span>
+        {countdown !== null
+          ? <span className="font-bold text-sm text-violet-600 animate-pulse">Prepare-se… {countdown}</span>
+          : <span className={cn('font-bold tabular-nums text-sm', timerColor)}>{Math.ceil(remaining)}s</span>
+        }
       </div>
 
       {/* Question */}

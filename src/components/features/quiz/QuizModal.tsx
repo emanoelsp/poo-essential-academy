@@ -46,15 +46,26 @@ function storePlayer(sessionId: string, playerId: string, nickname: string) {
 
 function useTimer(startedAt: number | null, duration: number, onExpire: () => void) {
   const [remaining, setRemaining] = useState(duration)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const rafRef = useRef<number | null>(null)
   const expiredRef = useRef(false)
 
   useEffect(() => {
-    if (startedAt == null) { setRemaining(duration); return }
+    if (startedAt == null) { setRemaining(duration); setCountdown(null); return }
     expiredRef.current = false
 
     const tick = () => {
-      const elapsed = (Date.now() - startedAt) / 1000
+      const now = Date.now()
+      // Enquanto ainda estamos no buffer de propagação, mostra contagem regressiva
+      if (now < startedAt) {
+        const secsLeft = Math.ceil((startedAt - now) / 1000)
+        setCountdown(secsLeft)
+        setRemaining(duration)
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+      setCountdown(null)
+      const elapsed = (now - startedAt) / 1000
       const left = Math.max(0, duration - elapsed)
       setRemaining(left)
       if (left <= 0 && !expiredRef.current) {
@@ -68,7 +79,7 @@ function useTimer(startedAt: number | null, duration: number, onExpire: () => vo
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [startedAt, duration, onExpire])
 
-  return remaining
+  return { remaining, countdown }
 }
 
 // ─── Join screen ──────────────────────────────────────────────────────────────
@@ -211,10 +222,10 @@ function QuestionScreen({
     }
   }, [answered, onAnswer])
 
-  const remaining = useTimer(session.questionStartedAt, QUESTION_TIME, handleExpire)
+  const { remaining, countdown } = useTimer(session.questionStartedAt, QUESTION_TIME, handleExpire)
 
   const handleSelect = (idx: number) => {
-    if (answered) return
+    if (answered || countdown !== null) return
     const timeMs = Math.round((QUESTION_TIME - remaining) * 1000)
     setSelected(idx)
     setAnswered(true)
@@ -223,6 +234,22 @@ function QuestionScreen({
 
   const progress = remaining / QUESTION_TIME
   const timerColor = remaining > 10 ? 'bg-green-400' : remaining > 5 ? 'bg-amber-400' : 'bg-red-400'
+
+  // Tela de countdown antes do timer oficial começar
+  if (countdown !== null) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 p-6 w-full max-w-2xl mx-auto min-h-[400px]">
+        <span className="text-white/50 text-sm">{session.currentQuestion + 1} / {session.totalQuestions}</span>
+        <div className="bg-white/10 rounded-2xl p-6 w-full">
+          <p className="text-white text-xl font-bold text-center leading-snug">{q.question}</p>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="text-8xl font-black text-white tabular-nums animate-pulse">{countdown}</div>
+          <p className="text-white/60 text-sm">Prepare-se…</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6 w-full max-w-2xl mx-auto">
