@@ -194,7 +194,234 @@ public class Main {
 
 ---
 
-## 6. Boas práticas — o que fazer e o que evitar
+## 6. Guard clauses + `Objects.requireNonNull` — falha rápido, lógica no nível zero
+
+Exceções mudam a **geometria do código**. Com `throw`, cada validação inválida encerra o método imediatamente — eliminando aninhamento e deixando a lógica real no nível zero.
+
+`Objects.requireNonNull` é o idioma Java para null checks no construtor — mais expressivo que um `if` manual e é o que todo código profissional usa:
+
+```mermaid
+sequenceDiagram
+    participant C as Chamador
+    participant CC as ContaBancaria
+    participant O as java.util.Objects
+
+    Note over C,O: ❌ campo nulo passado no construtor
+    C->>CC: new ContaBancaria(null, 100.0)
+    CC->>O: requireNonNull(null, "Titular não pode ser nulo")
+    O-->>CC: NullPointerException("Titular não pode ser nulo")
+    CC-->>C: objeto NUNCA criado — invariante protegida ✅
+
+    Note over C,O: ✅ dados válidos
+    C->>CC: new ContaBancaria("Ana", 100.0)
+    CC->>O: requireNonNull("Ana", "Titular não pode ser nulo")
+    O-->>CC: retorna "Ana"
+    CC->>CC: this.titular = "Ana"
+    CC-->>C: objeto criado em estado válido garantido
+```
+
+Agora veja o impacto de `throw` na **estrutura de um método** de empréstimo:
+
+```mermaid
+flowchart TD
+    START(["🔵 emprestar(isbn, usuario)\nentra no método"]) --> V1{"isbn\né nulo?"}
+    V1 -- "sim" --> E1["💥 throw NullPointerException\n'ISBN não pode ser nulo'"]
+    V1 -- "não" --> V2{"isbn\nestá vazio?"}
+    V2 -- "sim" --> E2["💥 throw IllegalArgumentException\n'ISBN não pode ser vazio'"]
+    V2 -- "não" --> V3{"livro existe\nno acervo?"}
+    V3 -- "não" --> E3["💥 throw LivroNaoEncontradoException\n'Livro não encontrado: isbn'"]
+    V3 -- "sim" --> V4{"livro está\ndisponível?"}
+    V4 -- "não" --> E4["💥 throw LivroIndisponivelException\n'Livro indisponível: titulo'"]
+    V4 -- "sim" --> OK(["✅ Executa empréstimo\nnível zero — sem aninhamento"])
+
+    style E1 fill:#7f1d1d,color:#fff
+    style E2 fill:#7f1d1d,color:#fff
+    style E3 fill:#7f1d1d,color:#fff
+    style E4 fill:#7f1d1d,color:#fff
+    style OK fill:#14532d,color:#fff
+    style START fill:#1e3a5f,color:#fff
+```
+
+Comparando as duas estruturas lado a lado:
+
+```mermaid
+flowchart LR
+    subgraph Ruim["❌ Ifs aninhados — lógica no 4º nível"]
+        direction TB
+        R1["emprestar()"] --> R2{"isbn\nnão nulo?"}
+        R2 -- "sim" --> R3{"isbn\nnão vazio?"}
+        R3 -- "sim" --> R4{"livro\nexiste?"}
+        R4 -- "sim" --> R5{"livro\ndisponível?"}
+        R5 -- "sim" --> R6["✅ lógica\n4º nível!"]
+        R2 -- "não" --> R7["🤷 return null\nsem explicação"]
+        R3 -- "não" --> R7
+        R4 -- "não" --> R7
+        R5 -- "não" --> R7
+    end
+
+    subgraph Bom["✅ Guard clauses — lógica no nível zero"]
+        direction TB
+        G1["emprestar()"] --> G2{"nulo?"}
+        G2 -- "sim" --> G3["🔴 throw"]
+        G2 -- "não" --> G4{"vazio?"}
+        G4 -- "sim" --> G5["🔴 throw"]
+        G4 -- "não" --> G6{"existe?"}
+        G6 -- "não" --> G7["🔴 throw"]
+        G6 -- "sim" --> G8{"disponível?"}
+        G8 -- "não" --> G9["🔴 throw"]
+        G8 -- "sim" --> G10["✅ lógica\nnível zero"]
+    end
+
+    style R6 fill:#92400e,color:#fff
+    style R7 fill:#7f1d1d,color:#fff
+    style G10 fill:#14532d,color:#fff
+    style G3 fill:#7f1d1d,color:#fff
+    style G5 fill:#7f1d1d,color:#fff
+    style G7 fill:#7f1d1d,color:#fff
+    style G9 fill:#7f1d1d,color:#fff
+```
+
+```java
+import java.util.Objects;
+
+// ❌ Ifs aninhados — cada validação aprofunda um nível de indentação
+public String emprestar(String isbn, String nomeUsuario) {
+    if (isbn != null) {
+        if (!isbn.isBlank()) {
+            Livro livro = acervo.get(isbn);
+            if (livro != null) {
+                if (livro.disponivel) {
+                    // lógica real — 4º nível de indentação
+                    livro.disponivel = false;
+                    String id = "EMP-" + System.currentTimeMillis();
+                    emprestimos.put(id, isbn);
+                    return id;
+                }
+            }
+        }
+    }
+    return null; // chamador não sabe o que deu errado
+}
+
+// ✅ Guard clauses — cada throw "corta" o fluxo; lógica real no nível zero
+public String emprestar(String isbn, String nomeUsuario) {
+    Objects.requireNonNull(isbn, "ISBN não pode ser nulo"); // idioma Java para null check
+    if (isbn.isBlank())     throw new IllegalArgumentException("ISBN não pode ser vazio");
+    Livro livro = acervo.get(isbn);
+    if (livro == null)      throw new LivroNaoEncontradoException(isbn);
+    if (!livro.disponivel)  throw new LivroIndisponivelException(livro.titulo);
+
+    // lógica real — nível zero, sem aninhamento, fácil de ler
+    livro.disponivel = false;
+    String id = "EMP-" + System.currentTimeMillis();
+    emprestimos.put(id, isbn);
+    return id;
+}
+
+// Objects.requireNonNull no construtor — protege o objeto desde o nascimento
+public class ContaBancaria {
+    private final String titular; // final garante imutabilidade após construção
+    private double saldo;
+
+    public ContaBancaria(String titular, double saldo) {
+        // idioma Java: mais legível que "if (titular == null) throw new NullPointerException(...)"
+        this.titular = Objects.requireNonNull(titular, "Titular não pode ser nulo");
+        if (saldo < 0) throw new IllegalArgumentException("Saldo inicial não pode ser negativo: " + saldo);
+        this.saldo = saldo;
+    }
+    // Garantia: se o objeto existe, titular != null e saldo >= 0
+}
+```
+
+> **Princípio**: faça o código **falhar cedo, claro e rápido**. Cada `throw` é uma guarda que elimina estados inválidos antes da lógica de negócio. O leitor chega à lógica real sem decifrar aninhamento.
+
+---
+
+## 7. `Optional<T>` vs Exception — quando não lançar
+
+Nem toda ausência de valor é um erro. `Optional` e exception têm **semânticas diferentes** — escolher errado comunica uma intenção incorreta ao chamador:
+
+```mermaid
+flowchart TD
+    A(["Método retorna\numa referência"]) --> B{"A ausência é\num erro de quem chamou?"}
+
+    B -- "Sim — violou\num contrato\nou invariante" --> C["🔴 throw Exception\nEx: sacar() sem saldo suficiente\n→ invariante violada"]
+
+    B -- "Não — ausência\né comportamento normal" --> D{"Chamador PRECISA\nsaber explicitamente\nque veio vazio?"}
+
+    D -- "Sim — forçar\ntratamento explícito" --> E["✅ Optional<T>\nEx: buscar(isbn)\n→ livro pode não existir"]
+
+    D -- "Raramente\ncontexto interno" --> F["⚠️ T ou null\ncom @Nullable\nrisco de NPE silencioso"]
+
+    C --> CX["📌 Operações com invariante:\nsacar, depositar,\nprocessar pedido"]
+    E --> EX["📌 Consultas onde ausência\né normal: buscar, encontrar,\nfiltrar, pesquisar"]
+
+    style C fill:#7f1d1d,color:#fff
+    style E fill:#14532d,color:#fff
+    style F fill:#92400e,color:#fff
+    style A fill:#1e3a5f,color:#fff
+```
+
+```mermaid
+sequenceDiagram
+    participant C as Chamador
+    participant B as Biblioteca
+
+    Note over C,B: 🔎 Busca — ausência é normal → Optional
+    C->>B: buscar("978-01")
+    B-->>C: Optional.empty()
+    C->>C: .ifPresent() / .orElse() / .orElseThrow()
+    Note over C: compilador obriga tratar o caso vazio
+
+    Note over C,B: 📖 Empréstimo — livro deve existir → Exception
+    C->>B: emprestar("isbn-invalido", "Ana")
+    B-->>C: 💥 LivroNaoEncontradoException
+    Note over C: erro claro — o chamador enviou isbn inválido
+```
+
+```java
+class Biblioteca {
+
+    // buscar — é NORMAL não encontrar → Optional
+    public Optional<Livro> buscar(String isbn) {
+        return Optional.ofNullable(acervo.get(isbn));
+    }
+
+    // emprestar — o livro DEVE existir neste contexto → exception
+    public String emprestar(String isbn, String usuario) {
+        Livro livro = acervo.get(isbn);
+        if (livro == null) throw new LivroNaoEncontradoException(isbn); // bug do chamador
+        if (!livro.disponivel) throw new LivroIndisponivelException(livro.titulo);
+        // ...
+    }
+}
+
+// Chamador com Optional — compilador não deixa esquecer o caso vazio:
+biblioteca.buscar("978-01")
+    .ifPresent(livro -> System.out.println("Encontrado: " + livro.titulo));
+
+// Se a ausência se tornar erro pra você, converta no ponto correto:
+Livro livro = biblioteca.buscar("978-01")
+    .orElseThrow(() -> new LivroNaoEncontradoException("978-01"));
+
+// Chamador com exception — trata o erro diretamente:
+try {
+    String id = biblioteca.emprestar("978-99", "Ana");
+} catch (LivroNaoEncontradoException e) {
+    System.err.println(e.getMessage()); // "Livro não encontrado: ISBN 978-99"
+}
+```
+
+| Situação | Use |
+|----------|-----|
+| Busca onde o item pode legitimamente não existir | `Optional<T>` |
+| Operação onde a ausência viola regra de negócio | `throw Exception` |
+| Valor de configuração com fallback natural | `Optional<T>` com `.orElse(padrao)` |
+| Campo obrigatório em construtor | `Objects.requireNonNull` |
+
+---
+
+## 8. Boas práticas — o que fazer e o que evitar
 
 ```java
 // ❌ Exception vaga — sem informação útil
@@ -232,7 +459,7 @@ public class ProdutoSemEstoqueException extends RuntimeException {
 
 ---
 
-## 7. Exemplo completo — Sistema de Biblioteca
+## 9. Exemplo completo — Sistema de Biblioteca
 
 ```java
 // Hierarquia de domínio
@@ -346,6 +573,10 @@ public class Processador {
 **Exercício 4** — Crie `EstoqueException` com campos `codigoProduto`, `quantidadeDisponivel` e `quantidadeSolicitada`. Na camada de apresentação, use esses campos para montar a mensagem do JOptionPane (não a mensagem genérica da exception).
 
 **Exercício 5** — Leia um arquivo CSV de notas (formato: `matricula,nota1,nota2`) e trate separadamente: arquivo não encontrado, linha com formato inválido, nota fora do range 0-10. Use exceptions customizadas para os dois últimos.
+
+**Exercício 6** — Refatore o método `sacar(double valor)` da `ContaBancaria` usando guard clauses com `Objects.requireNonNull` e `throw` antecipado. A lógica de débito deve ficar no nível zero — sem `if-else` aninhado. Compare o antes e depois da indentação.
+
+**Exercício 7** — Adicione um método `buscarPorTitular(String titular)` à `ContaBancaria` que retorna `Optional<ContaBancaria>` em vez de `null` ou exception. Na camada de apresentação, use `.orElseThrow()` para converter a ausência em `ContaNaoEncontradaException` apenas quando necessário. Explique por que `buscar` usa `Optional` mas `sacar` usa exception.
 
 > **Gabarito:**
 > Exercício 3:
