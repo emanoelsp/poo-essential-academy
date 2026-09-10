@@ -133,29 +133,32 @@ Funcionario f = new Horista("Ana", "111", "TI", 45.0);
 
 ---
 
-## 4. Template Method — padrão com classe abstrata
+## 4. O que `abstract` torna possível — prévia de um padrão
 
-Classes abstratas são perfeitas para o **Template Method Pattern**: a superclasse define a estrutura do algoritmo, as subclasses implementam os passos específicos.
+> **Nota:** esta seção é uma **ilustração**, não um conteúdo obrigatório do encontro. O objetivo é mostrar onde classes abstratas chegam naturalmente. O padrão Template Method será explorado formalmente em um módulo futuro.
+
+Considere o problema: você precisa gerar vários tipos de relatório. Todos seguem a mesma sequência — cabeçalho, conteúdo, rodapé — mas o conteúdo varia por tipo.
+
+Sem `abstract`, não há como garantir que toda subclasse implemente o conteúdo. Com `abstract`, o compilador garante isso:
 
 ```java
 public abstract class RelatorioPDF {
 
-    // Template Method: define a sequência — não pode ser sobrescrito
+    // Sequência fixa — 'final' impede que subclasses mudem a ordem
     public final void gerar() {
-        imprimirCabecalho();   // passo fixo
-        imprimirConteudo();    // passo variável — subclasse implementa
-        imprimirRodape();      // passo fixo
+        imprimirCabecalho();   // fixo — implementado aqui
+        imprimirConteudo();    // variável — CADA SUBCLASSE implementa o seu
+        imprimirRodape();      // fixo — implementado aqui
     }
 
-    // Implementações fixas
     private void imprimirCabecalho() {
-        System.out.println("=== RELATÓRIO GERADO EM " + java.time.LocalDate.now() + " ===");
+        System.out.println("=== RELATÓRIO — " + java.time.LocalDate.now() + " ===");
     }
     private void imprimirRodape() {
-        System.out.println("=== FIM DO RELATÓRIO ===");
+        System.out.println("=== FIM ===");
     }
 
-    // Passo que VARIA por tipo de relatório — subclasse deve implementar
+    // Abstrato: sem corpo. O compilador exige implementação em toda subclasse concreta.
     protected abstract void imprimirConteudo();
 }
 
@@ -178,15 +181,15 @@ class RelatorioFuncionarios extends RelatorioPDF {
         System.out.println("  Funcionários ativos: " + totalFuncionarios);
     }
 }
-
-// Uso:
-// new RelatorioVendas(150000.0).gerar();
-// new RelatorioFuncionarios(42).gerar();
 ```
+
+O que `abstract` fez aqui: tornou impossível criar um relatório sem implementar o conteúdo. A estrutura é garantida pela superclasse; a variação é delegada às subclasses. Isso é `abstract` fazendo seu trabalho.
 
 ---
 
-## 5. Classe Abstrata vs. Método Abstrato
+## 5. Classe Abstrata vs. Método Abstrato — revisitando o Exercício 5 do Encontro 11
+
+No Encontro 11, você implementou `FormaGeometrica` como classe concreta. Agora veja o que muda quando ela se torna abstrata — e por que a versão abstrata é a correta para este domínio:
 
 ```mermaid
 classDiagram
@@ -231,6 +234,8 @@ public abstract class FormaGeometrica {
     public abstract double calcularPerimetro();
 
     // Método concreto que usa os abstratos — isso é o poder da abstração!
+    // getClass().getSimpleName() retorna o nome da classe real em tempo de execução:
+    // para um Circulo, retorna "Circulo"; para um Retangulo, retorna "Retangulo".
     public void exibir() {
         System.out.printf("[%s | Cor: %s | Área: %.2f | Perímetro: %.2f]%n",
             getClass().getSimpleName(), cor, calcularArea(), calcularPerimetro());
@@ -283,7 +288,7 @@ public class DemoFormas {
         }
 
         System.out.printf("%nSoma das áreas: %.2f%n", somaAreas);
-        System.out.println("Maior forma: " + maior.getClass().getSimpleName());
+        System.out.println("Maior forma: " + maior.getClass().getSimpleName()); // ex: "Circulo"
     }
 }
 ```

@@ -6,7 +6,7 @@
 
 ## 1. A cadeia de construtores
 
-Quando criamos `new Horista(...)`, os construtores são chamados em **cadeia**, de cima para baixo na hierarquia:
+Quando criamos `new Horista(...)`, os construtores são chamados em **cadeia**, sempre do mais geral para o mais específico:
 
 ```mermaid
 flowchart TD
@@ -20,36 +20,43 @@ flowchart TD
     style G fill:#4ade80,color:#000
 ```
 
+Para ver a ordem na prática, basta adicionar um `println` em cada construtor:
+
 ```java
-class A {
-    A() {
-        System.out.println("Construtor de A");
+class Funcionario {
+    protected String nome;
+    protected String cpf;
+
+    Funcionario(String nome, String cpf) {
+        System.out.println("  2. Construtor de Funcionario — nome e cpf atribuídos");
+        this.nome = nome;
+        this.cpf  = cpf;
     }
 }
 
-class B extends A {
-    B() {
-        // super() é chamado IMPLICITAMENTE aqui se não houver chamada explícita
-        System.out.println("Construtor de B");
+class Horista extends Funcionario {
+    private double valorHora;
+
+    Horista(String nome, String cpf, double valorHora) {
+        super(nome, cpf); // ← dispara Funcionario(), que dispara Object()
+        System.out.println("  3. Construtor de Horista — valorHora atribuído");
+        this.valorHora = valorHora;
     }
 }
 
-class C extends B {
-    C() {
-        super(); // explícito — mas seria implícito de qualquer forma
-        System.out.println("Construtor de C");
-    }
-}
-
-// new C() imprime:
-// Construtor de A
-// Construtor de B
-// Construtor de C
+// new Horista("Ana", "111", 50.0) imprime:
+//   1. Construtor de Object  (implícito — sempre o topo da cadeia)
+//   2. Construtor de Funcionario — nome e cpf atribuídos
+//   3. Construtor de Horista — valorHora atribuído
 ```
+
+**Ponto-chave:** o objeto só está "pronto" quando o construtor mais específico termina. Até lá, a inicialização vai de cima para baixo — da raiz (`Object`) até a folha (`Horista`).
 
 ---
 
-## 2. `super()` com parâmetros — passando argumentos para cima
+## 2. `super()` com parâmetros — hierarquia de três níveis
+
+Cada nível da hierarquia passa os dados que lhe cabem para o nível acima:
 
 ```java
 class Veiculo {
@@ -70,7 +77,7 @@ class Carro extends Veiculo {
     private int numeroPortas;
 
     Carro(String placa, String marca, int ano, int portas) {
-        super(placa, marca, ano); // DEVE ser a primeira instrução do construtor
+        super(placa, marca, ano); // passa para Veiculo
         if (portas < 2 || portas > 5)
             throw new IllegalArgumentException("Número de portas inválido.");
         this.numeroPortas = portas;
@@ -89,59 +96,87 @@ class CarroEletrico extends Carro {
 }
 ```
 
+```mermaid
+sequenceDiagram
+    participant main
+    participant CarroEletrico
+    participant Carro
+    participant Veiculo
+
+    main->>CarroEletrico: new CarroEletrico(placa, marca, ano, portas, autonomia)
+    CarroEletrico->>Carro: super(placa, marca, ano, portas)
+    Carro->>Veiculo: super(placa, marca, ano)
+    Veiculo-->>Carro: placa, marca, ano atribuídos
+    Carro-->>CarroEletrico: numeroPortas atribuído
+    CarroEletrico-->>main: objeto pronto
+```
+
 ---
 
 ## 3. Sobrescrita de Métodos com `@Override`
 
-A sobrescrita permite que a subclasse **redefina o comportamento** de um método herdado.
-
-**Regras da sobrescrita:**
-- Mesmo nome, mesmos parâmetros, mesmo tipo de retorno (ou subtipo)
-- Visibilidade não pode ser mais restrita
-- A anotação `@Override` é opcional, mas altamente recomendada
+A sobrescrita (*override*) permite que a subclasse **redefina o comportamento** de um método herdado. A assinatura deve ser idêntica — mesmo nome, mesmos parâmetros, mesmo tipo de retorno.
 
 ```java
 class Animal {
     protected String nome;
-
     Animal(String nome) { this.nome = nome; }
 
-    String emitirSom() {
-        return nome + " fez um som genérico.";
+    public String emitirSom() {
+        return nome + " fez um som."; // comportamento genérico
     }
 
     @Override
-    public String toString() {
-        return "Animal[" + nome + "]";
-    }
+    public String toString() { return "Animal[" + nome + "]"; }
 }
 
 class Cachorro extends Animal {
     private String raca;
+    Cachorro(String nome, String raca) { super(nome); this.raca = raca; }
 
-    Cachorro(String nome, String raca) {
-        super(nome);
-        this.raca = raca;
-    }
-
-    @Override // Redefine o comportamento para Cachorro
-    String emitirSom() {
-        return nome + " late: Au au!"; // comportamento específico
+    @Override
+    public String emitirSom() {
+        return nome + " late: Au au!"; // SOBRESCREVE — mesma assinatura, novo comportamento
     }
 
     @Override
-    public String toString() {
-        return "Cachorro[" + nome + " | Raça: " + raca + "]";
-    }
+    public String toString() { return "Cachorro[" + nome + " | " + raca + "]"; }
 }
 
 class Gato extends Animal {
     Gato(String nome) { super(nome); }
 
     @Override
-    String emitirSom() { return nome + " mia: Miau!"; }
+    public String emitirSom() { return nome + " mia: Miau!"; }
 }
 ```
+
+**Por que `@Override` é obrigatório na prática:**
+
+```java
+class Cachorro extends Animal {
+    // SEM @Override — erro de digitação passa despercebido
+    public String emitirsom() { // 's' minúsculo — isso é uma sobrecarga, não sobrescrita!
+        return "Au au!";        // Animal.emitirSom() continua sendo chamado — bug silencioso
+    }
+
+    // COM @Override — compilador rejeita se a assinatura não existir na superclasse
+    @Override
+    public String emitirSom() { // ← compilador valida que Animal tem exatamente este método
+        return "Au au!";
+    }
+}
+```
+
+**Regras da sobrescrita:**
+
+| Regra | Detalhe |
+|-------|---------|
+| Mesma assinatura | Nome + parâmetros + tipo de retorno idênticos (ou subtipo) |
+| Visibilidade não pode ser mais restrita | `public` na super → não pode virar `protected` na sub |
+| `@Override` é opcional, mas obrigatório na prática | Protege contra typos e assinaturas erradas |
+| Métodos `final` não podem ser sobrescritos | Compilador bloqueia |
+| Métodos `static` não são sobrescritos — são escondidos (*hiding*) | Comportamento diferente — tema avançado |
 
 ```mermaid
 classDiagram
@@ -164,9 +199,9 @@ classDiagram
 
 ---
 
-## 4. Chamando o método da superclasse com `super.metodo()`
+## 4. `super.método()` — estender em vez de substituir
 
-Às vezes queremos **estender** o comportamento da superclasse, não substituí-lo:
+Às vezes queremos acrescentar comportamento ao método herdado, não substituí-lo inteiramente. `super.método()` chama a implementação da superclasse e permite construir em cima dela:
 
 ```java
 class Funcionario {
@@ -180,23 +215,50 @@ class Funcionario {
 }
 
 class Gerente extends Funcionario {
-    private String[] subordinados;
     private int totalSubordinados;
 
     @Override
     public String toString() {
-        // Chama o toString da superclasse e ACRESCENTA informações
-        return super.toString() +
-               String.format(" | Gerente | %d subordinados", totalSubordinados);
+        return super.toString()  // ← reutiliza o que Funcionario já formata
+             + String.format(" | Gerente | %d subordinados", totalSubordinados);
+    }
+}
+
+// Saída:
+// [Ana | TI] | Gerente | 5 subordinados
+//  ↑ super.toString()    ↑ acréscimo de Gerente
+```
+
+**Estendendo cálculos — não só strings:**
+
+```java
+class Conta {
+    protected double saldo;
+
+    double calcularRendimento() {
+        return saldo * 0.005; // 0,5% — rendimento base para todos
+    }
+}
+
+class ContaPremiada extends Conta {
+    private boolean vip;
+
+    @Override
+    double calcularRendimento() {
+        double base  = super.calcularRendimento(); // herda o cálculo base
+        double bonus = vip ? base * 0.5 : 0;      // VIP ganha 50% a mais
+        return base + bonus;
     }
 }
 ```
 
+> **Regra de ouro:** se você sobrescreve `fecharMes()` em `Horista` e precisa que o comportamento de `Funcionario.fecharMes()` também rode, chame `super.fecharMes()` **antes** do código específico. Esquecer esse `super` é um dos bugs mais comuns em hierarquias reais.
+
 ---
 
-## 5. A classe `Object` — a raiz de tudo
+## 5. A classe `Object` — `toString`, `equals` e `hashCode`
 
-Em Java, toda classe herda implicitamente de `java.lang.Object`. Isso significa que todo objeto tem os métodos de Object:
+Em Java, toda classe herda implicitamente de `java.lang.Object`. Dois dos métodos mais importantes que `Object` fornece — e que quase sempre devemos sobrescrever — são `equals` e `hashCode`.
 
 ```mermaid
 classDiagram
@@ -210,12 +272,13 @@ classDiagram
     Funcionario <|-- Horista
 ```
 
-```java
-// toString() padrão de Object: "Classe@hashHex" — praticamente inútil
-Produto p = new Produto("Notebook", 2500.0);
-System.out.println(p); // sem @Override: "Produto@4e50df2e"
+### `toString()` — representação legível
 
-// Com @Override: legível e útil
+```java
+Produto p = new Produto("Notebook", 2500.0);
+System.out.println(p); // SEM @Override: "Produto@4e50df2e" — inútil
+
+// COM @Override:
 class Produto {
     private String nome;
     private double preco;
@@ -224,46 +287,61 @@ class Produto {
     public String toString() {
         return String.format("Produto[%s | R$ %.2f]", nome, preco);
     }
+}
+// Agora: "Produto[Notebook | R$ 2.500,00]"
+```
+
+### `equals()` e `hashCode()` — o contrato que não pode ser quebrado
+
+Por padrão, `equals()` compara **referências** (`==`). Para comparar por **valor**, precisamos sobrescrever:
+
+```java
+class Produto {
+    private String nome;
+    private double preco;
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof Produto outro)) return false;
-        return this.nome.equals(outro.nome) && this.preco == outro.preco;
+        if (this == obj) return true;           // mesma referência — trivialmente igual
+        if (!(obj instanceof Produto)) return false; // tipo errado — nunca igual
+        Produto outro = (Produto) obj;          // cast seguro — instanceof já garantiu
+        return this.nome.equals(outro.nome)
+            && Double.compare(this.preco, outro.preco) == 0;
     }
-}
-
-// Agora:
-Produto p1 = new Produto("Notebook", 2500.0);
-Produto p2 = new Produto("Notebook", 2500.0);
-System.out.println(p1);           // Produto[Notebook | R$ 2500,00]
-System.out.println(p1.equals(p2)); // true (sem override seria false — referências diferentes)
-```
-
----
-
-## 6. Chamada composta — super.metodo() + lógica própria
-
-```java
-class Conta {
-    protected String titular;
-    protected double saldo;
-
-    double calcularRendimento() {
-        return saldo * 0.005; // 0.5% base para todos
-    }
-}
-
-class ContaPremiada extends Conta {
-    private boolean vip;
 
     @Override
-    double calcularRendimento() {
-        double rendimentoBase = super.calcularRendimento(); // herda o cálculo base
-        double bonus = vip ? rendimentoBase * 0.5 : 0;    // VIP ganha 50% a mais
-        return rendimentoBase + bonus;
+    public int hashCode() {
+        // Deve usar OS MESMOS campos que equals usa
+        int resultado = nome.hashCode();
+        resultado = 31 * resultado + Double.hashCode(preco);
+        return resultado;
     }
 }
+```
+
+> **O contrato `equals`/`hashCode` — nunca viole:**
+> Se `a.equals(b)` é `true`, então `a.hashCode() == b.hashCode()` **deve** ser `true`.
+> O inverso não precisa valer — dois objetos podem ter o mesmo `hashCode` sem serem iguais.
+>
+> Se você sobrescrever `equals` sem sobrescrever `hashCode`, `HashSet` e `HashMap` vão se comportar de forma imprevisível — dois objetos "iguais" coexistirão no mesmo conjunto como se fossem diferentes.
+
+```java
+Produto p1 = new Produto("Notebook", 2500.0);
+Produto p2 = new Produto("Notebook", 2500.0);
+
+// SEM override de equals:
+System.out.println(p1.equals(p2)); // false — referências diferentes
+System.out.println(p1 == p2);      // false — sempre false para objetos distintos
+
+// COM override (implementação acima):
+System.out.println(p1.equals(p2)); // true — mesmo nome e preço
+System.out.println(p1 == p2);      // false — == sempre compara referência
+
+// COM override de equals E hashCode:
+Set<Produto> catalogo = new HashSet<>();
+catalogo.add(p1);
+catalogo.add(p2); // sem hashCode: adiciona os dois — "duplicata" no set!
+System.out.println(catalogo.size()); // com hashCode correto: 1 ✅ | sem: 2 ❌
 ```
 
 ---
@@ -329,18 +407,23 @@ Crie 3 objetos e mostre os diferentes valores calculados para a mesma base de R$
 ---
 
 ### Exercício 4 — Médio · 25 XP
-**Equals e comparação de objetos**
+**equals e hashCode — contrato completo**
 
-Implemente a classe `Livro` (isbn, titulo, autor) com `@Override equals` que considera dois livros iguais se tiverem o mesmo ISBN. Demonstre:
+Implemente a classe `Livro` (isbn, titulo, autor) com `@Override equals` que considera dois livros iguais se tiverem o mesmo ISBN, **e** `@Override hashCode` usando o mesmo campo. Demonstre:
 
 ```java
 Livro l1 = new Livro("978-0", "Clean Code", "Martin");
 Livro l2 = new Livro("978-0", "Clean Code", "Martin");
 Livro l3 = new Livro("978-1", "Outro Livro", "Autor");
 
-// SEM override: l1.equals(l2) = false (referências diferentes)
-// COM override: l1.equals(l2) = true (mesmo ISBN)
-// l1 == l2 sempre false (referências diferentes)
+System.out.println(l1.equals(l2)); // true  — mesmo ISBN
+System.out.println(l1.equals(l3)); // false — ISBN diferente
+System.out.println(l1 == l2);      // false — referências distintas
+
+Set<Livro> acervo = new HashSet<>();
+acervo.add(l1);
+acervo.add(l2); // l2 é "igual" a l1 — não deve duplicar
+System.out.println(acervo.size()); // deve imprimir 1
 ```
 
 ---
@@ -412,7 +495,7 @@ class Carro extends Veiculo {
 
     Carro(String marca, int ano, String modelo) {
         // Erro 1: atribuição antes do super() — NÃO compila
-        this.marca = marca;      // ← isso teria que vir DEPOIS do super(...)
+        this.marca = marca;      // ← teria que vir DEPOIS do super(...)
         super(marca, ano);       // super() deve ser A PRIMEIRA LINHA
     }
 
@@ -424,4 +507,4 @@ class Carro extends Veiculo {
 }
 ```
 
-> **Dicas:** (1) `super(...)` deve ser a **primeira instrução** do construtor — o Java garante que a superclasse seja inicializada antes. (2) `@Override` exige assinatura **idêntica** à da superclasse — adicionar parâmetros cria uma sobrecarga, não uma sobrescrita, e o compilador vai reclamar. (3) Declare campo de mesmo nome na subclasse somente se realmente precisar de outro campo; caso contrário, use o `this.marca` da superclasse via `protected`.
+> **Dicas:** (1) `super(...)` deve ser a **primeira instrução** do construtor. (2) `@Override` exige assinatura **idêntica** — adicionar parâmetros cria uma sobrecarga, e o compilador vai reclamar. (3) Declare campo de mesmo nome na subclasse somente se realmente precisar de outro campo; caso contrário, use o `this.marca` herdado via `protected`.

@@ -7,6 +7,7 @@ import { parseFillTable } from './FillInTable'
 import { parseFillUML } from './FillInUML'
 import { parseRelationshipUML } from './RelationshipUML'
 import { parseCodeTrace } from './CodeTrace'
+import { parseIsAHasA } from './IsAHasA'
 import { QuizModal } from '@/components/features/quiz/QuizModal'
 import { getQuizQuestions } from '@/content/data/quizQuestions'
 import { Lock, Gamepad2 } from 'lucide-react'
@@ -97,6 +98,10 @@ function parseMermaidAndCode(content: string, showGabarito: boolean, encounterSl
     if (block.startsWith('```code-trace')) {
       const src = block.replace(/^```code-trace\n?/, '').replace(/\n?```$/, '')
       return <React.Fragment key={i}>{parseCodeTrace(src)}</React.Fragment>
+    }
+    if (block.startsWith('```is-a-has-a')) {
+      const src = block.replace(/^```is-a-has-a\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseIsAHasA(src)}</React.Fragment>
     }
     if (block.startsWith('```')) {
       const firstLine = block.split('\n')[0]
