@@ -216,6 +216,38 @@ export function watchContentSettings(cb: (s: ContentSettings) => void): Unsubscr
   })
 }
 
+// ─── Quiz results ─────────────────────────────────────────────────────────────
+
+export interface QuizResult {
+  id: string           // `${uid}_${slug}`
+  uid: string
+  studentName: string
+  studentEmail: string
+  slug: string
+  encounterTitle: string
+  module: number
+  score: number
+  total: number
+  pct: number
+  completedAt: unknown
+}
+
+export async function saveQuizResult(result: Omit<QuizResult, 'id' | 'completedAt'>) {
+  const db = getFirebaseDb()
+  const id = `${result.uid}_${result.slug}`
+  await setDoc(doc(db, 'quizResults', id), {
+    ...result,
+    id,
+    completedAt: serverTimestamp(),
+  })
+}
+
+export async function getAllQuizResults(): Promise<QuizResult[]> {
+  const db   = getFirebaseDb()
+  const snap = await getDocs(collection(db, 'quizResults'))
+  return snap.docs.map((d) => d.data() as QuizResult)
+}
+
 // ─── Challenge submissions (teacher validation queue) ──────────────────────────
 
 const submissionId = (uid: string, slug: string) => `${uid}_${slug}`

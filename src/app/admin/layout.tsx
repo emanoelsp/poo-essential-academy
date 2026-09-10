@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Gamepad2,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePathname } from 'next/navigation'
@@ -23,8 +24,9 @@ const NAV = [
   { href: '/admin/modulos',   label: 'Módulos',     icon: Lock            },
   { href: '/admin/conteudo',  label: 'Gabarito',    icon: BookOpen        },
   { href: '/admin/validacoes',label: 'Validações',  icon: Sword           },
-  { href: '/admin/alunos',    label: 'Alunos',      icon: Users           },
-  { href: '/admin/quiz',      label: 'Quiz',        icon: Gamepad2        },
+  { href: '/admin/alunos',         label: 'Alunos',         icon: Users          },
+  { href: '/admin/questionarios',  label: 'Questionários',  icon: ClipboardList  },
+  { href: '/admin/quiz',           label: 'Quiz ao vivo',   icon: Gamepad2       },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

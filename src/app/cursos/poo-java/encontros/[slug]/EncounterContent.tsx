@@ -12,7 +12,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Clock, Send, XCircle, ExternalLink } from 'lucide-react'
 import type { Encounter, Submission } from '@/types'
-import { createSubmission, watchSubmission } from '@/lib/firestore'
+import { createSubmission, watchSubmission, saveQuizResult } from '@/lib/firestore'
 import toast from 'react-hot-toast'
 
 interface EncounterContentProps {
@@ -180,6 +180,20 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
           xp={encounter.xp}
           alreadyCompleted={completed}
           onComplete={handleComplete}
+          onFinish={(score, total) => {
+            if (!user || completed) return
+            saveQuizResult({
+              uid:            user.uid,
+              studentName:    profile?.displayName || user.displayName || user.email?.split('@')[0] || 'Aluno',
+              studentEmail:   user.email ?? '',
+              slug:           encounter.slug,
+              encounterTitle: encounter.title,
+              module:         encounter.module,
+              score,
+              total,
+              pct: Math.round((score / total) * 100),
+            })
+          }}
         />
       ) : (
         <>

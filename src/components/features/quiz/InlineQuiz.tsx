@@ -17,10 +17,11 @@ interface InlineQuizProps {
   slug: string
   xp: number
   onComplete: () => void
+  onFinish?: (score: number, total: number) => void
   alreadyCompleted?: boolean
 }
 
-export function InlineQuiz({ slug, xp, onComplete, alreadyCompleted = false }: InlineQuizProps) {
+export function InlineQuiz({ slug, xp, onComplete, onFinish, alreadyCompleted = false }: InlineQuizProps) {
   const questions = getQuizQuestions(slug)
   const [current, setCurrent]     = useState(0)
   const [selected, setSelected]   = useState<number | null>(null)
@@ -46,6 +47,7 @@ export function InlineQuiz({ slug, xp, onComplete, alreadyCompleted = false }: I
       // correctCount já foi incrementado por handleSelect antes deste clique
       setScore(correctCount)
       setFinished(true)
+      onFinish?.(correctCount, questions.length)
       if (!alreadyCompleted) onComplete()
     } else {
       setCurrent((c) => c + 1)
