@@ -518,7 +518,7 @@ mindmap
       mesma classe
       mesmo pacote
       subclasses
-    "`super()`"
+    [super]
       primeira instrução
       inicializa superclasse
     @Override
