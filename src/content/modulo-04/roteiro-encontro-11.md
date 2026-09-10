@@ -402,7 +402,7 @@ Mostre ou adicione rapidamente na IDE o `Assalariado` e `Comissionado` seguindo 
 > - Upcasting permite listas heterogêneas — todos os tipos convivem sob o tipo comum
 > - `instanceof` permite identificar o tipo real quando necessário
 >
-> Agora façam os exercícios da plataforma. Os dois primeiros são conceituais — É-UM ou TEM-UM. Os demais são implementação. O exercício 4 é o mais próximo do que o Módulo 4 vai exigir na atividade prática."
+> Agora façam os exercícios da plataforma. O exercício 1 é É-UM/TEM-UM — interativo, feedback na hora. O exercício 2 é troubleshooting — leiam o código, identifiquem os 3 bugs e respondam as perguntas. Do exercício 3 em diante é implementação. O exercício 5 é o mais próximo do que o Módulo 4 vai exigir na atividade prática."
 
 ---
 
@@ -424,7 +424,7 @@ Mostre ou adicione rapidamente na IDE o `Assalariado` e `Comissionado` seguindo 
 
 **Se sobrar tempo:**
 - Mostre o `toString()` padrão de `Object` (`Horista@4e50df2e`) antes de sobrescrever — impacto visual de por que `@Override toString()` é quase sempre necessário
-- Pergunte à turma onde ficaria `calcularSalario()` se `Funcionario` não existisse — ajuda a consolidar o raciocínio de extração bottom-up do exercício 3
+- Pergunte à turma onde ficaria `calcularSalario()` se `Funcionario` não existisse — ajuda a consolidar o raciocínio de extração bottom-up do exercício 4
 
 ---
 
@@ -432,7 +432,54 @@ Mostre ou adicione rapidamente na IDE o `Assalariado` e `Comissionado` seguindo 
 
 ---
 
-### Exercício 1 — Hierarquia Simples
+### Exercício 1 — É-UM ou TEM-UM?
+
+> 💬 **Condução sugerida:**
+>
+> O exercício é interativo na plataforma — cada aluno responde individualmente com feedback instantâneo. Projete a tela e percorra os 10 pares em voz alta antes ou depois que a turma responder. Deixe a discussão acontecer especialmente nos itens 3 (Gerente/Funcionario) e 4 (Turma/Aluno), que dividem opiniões.
+
+| # | Relação | Classificação | Justificativa |
+|---|---------|:-------------:|---------------|
+| 1 | `ContaCorrente` e `ContaPoupanca` | **Herança** | Ambas são tipos de `Conta` — titular, saldo, operações básicas em comum |
+| 2 | `Pedido` e `ItemPedido` | **Composição** | Um `Pedido` *contém* vários `ItemPedido` — não é um tipo de item |
+| 3 | `Gerente` e `Funcionario` | **Composição** | `Gerente` *gerencia* funcionários; no domínio de RH, TEM dados funcionais, não É um tipo especial de funcionário |
+| 4 | `Turma` e `Aluno` | **Composição** | Uma `Turma` *contém* alunos — não é um aluno |
+| 5 | `Estudante` e `PessoaFisica` | **Herança** | Todo estudante É uma pessoa física — CPF, nome, data de nascimento comuns |
+| 6 | `Motor` e `Carro` | **Composição** | Um `Carro` *tem* um motor — motor não é um tipo de carro |
+| 7 | `Notebook` e `Computador` | **Herança** | Notebook É-UM computador — tem processador, memória, SO; especializa com bateria e tela integrada |
+| 8 | `Empresa` e `Funcionario` | **Composição** | `Empresa` *tem* funcionários — não é um tipo de funcionário |
+| 9 | `Aluno` e `Pessoa` | **Herança** | Aluno É-UMA Pessoa — herda nome, CPF, endereço; especializa com matrícula e notas |
+| 10 | `Biblioteca` e `Livro` | **Composição** | `Biblioteca` *tem* livros — não é um tipo de livro |
+
+**Item 3 — onde a discussão fica interessante:**
+
+> 💬 **Fala do professor:**
+>
+> "Gerente e Funcionario é o exemplo mais polêmico. Em alguns modelos de domínio, `Gerente extends Funcionario` faz sentido — o gerente também é um funcionário, tem CPF, salário, departamento.
+>
+> O problema aparece quando o modelo exige que um gerente *tenha* subordinados — e aí a classe começa a acumular responsabilidades de funcionário E de gestor. É o sinal para separar: `Gerente` tem os dados funcionais via composição e tem a lista de subordinados como atributo próprio.
+>
+> Não existe resposta única correta — existe a que faz mais sentido para o problema que você está modelando. A pergunta que guia: 'se eu usar herança aqui, vou herdar métodos que não fazem sentido para a subclasse?' Se sim, composição."
+
+---
+
+### Exercício 2 — Troubleshooting
+
+> 💬 **Condução sugerida:**
+>
+> O exercício é interativo na plataforma. Reserve 5–8 minutos para a turma tentar individualmente. Depois revele as respostas comentando cada bug em voz alta.
+
+| Bug | Linha problemática | O que está errado | Conceito violado |
+|-----|-------------------|-------------------|-----------------|
+| 1 | `System.out.println(nome + ...)` em `Cachorro.latir()` | Acessa `nome` que é `private` em `Animal` — deveria usar `getNome()` | **Encapsulamento** — `private` só é visível na própria classe |
+| 2 | `class Gerente extends Funcionario` | Usa herança só para reutilizar dados, sem relação É-UM real | **É-UM vs TEM-UM** — herança exige que a relação É-UM seja verdadeira |
+| 3 | `throw new UnsupportedOperationException(...)` em `Peixe.emitirSom()` | Subclasse quebra o contrato — quem usa `Animal` espera `emitirSom()` sem exceção | **LSP** — subclasse deve honrar o contrato da superclasse |
+
+> 💡 **Conecte com o exercício 1:** os bugs 1 e 2 são exatamente os erros de É-UM/TEM-UM que a turma acabou de classificar — só que agora aparecendo em código real.
+
+---
+
+### Exercício 3 — Hierarquia Simples
 
 > 💬 **Condução sugerida:**
 >
@@ -521,27 +568,3 @@ public class Main {
 
 ---
 
-### Exercício 2 — É-UM ou TEM-UM?
-
-> 💬 **Condução sugerida:**
->
-> Projete as 6 relações e peça para a turma votar levantando a mão antes de revelar. Deixe a discussão acontecer — especialmente no item 3 (Gerente/Funcionario), que divide opiniões.
-
-| # | Relação | Classificação | Justificativa |
-|---|---------|:-------------:|---------------|
-| 1 | `ContaCorrente` e `ContaPoupanca` | **Herança** | Ambas são tipos de `Conta` — têm titular, saldo, operações básicas em comum |
-| 2 | `Pedido` e `ItemPedido` | **Composição** | Um `Pedido` *contém* vários `ItemPedido` — não é um tipo de item |
-| 3 | `Gerente` e `Funcionario` | **Composição** | `Gerente` *gerencia* funcionários; no domínio de RH, um gerente TEM dados funcionais, não É um tipo especial de funcionário |
-| 4 | `Turma` e `Aluno` | **Composição** | Uma `Turma` *contém* alunos — não é um aluno |
-| 5 | `Estudante` e `PessoaFisica` | **Herança** | Todo estudante É uma pessoa física — CPF, nome, data de nascimento são comuns |
-| 6 | `Motor` e `Carro` | **Composição** | Um `Carro` *tem* um motor — motor não é um tipo de carro |
-
-**Item 3 — onde a discussão fica interessante:**
-
-> 💬 **Fala do professor:**
->
-> "Gerente e Funcionario é o exemplo mais polêmico. Em alguns modelos de domínio, `Gerente extends Funcionario` faz sentido — o gerente também é um funcionário, tem CPF, salário, departamento.
->
-> O problema aparece quando o modelo exige que um gerente *tenha* subordinados — e aí a classe começa a acumular responsabilidades de funcionário E de gestor. É o sinal para separar: `Gerente` tem os dados funcionais via composição e tem a lista de subordinados como atributo próprio.
->
-> Não existe resposta única correta — existe a que faz mais sentido para o problema que você está modelando. A pergunta que guia: 'se eu usar herança aqui, vou herdar métodos que não fazem sentido para a subclasse?' Se sim, composição."
