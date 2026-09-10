@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Gamepad2,
   ClipboardList,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePathname } from 'next/navigation'
@@ -27,6 +28,7 @@ const NAV = [
   { href: '/admin/alunos',         label: 'Alunos',         icon: Users          },
   { href: '/admin/questionarios',  label: 'Questionários',  icon: ClipboardList  },
   { href: '/admin/quiz',           label: 'Quiz ao vivo',   icon: Gamepad2       },
+  { href: '/admin/roteiros',       label: 'Roteiros',       icon: ScrollText     },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
