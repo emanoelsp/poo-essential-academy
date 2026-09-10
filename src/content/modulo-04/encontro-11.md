@@ -518,7 +518,7 @@ mindmap
       mesma classe
       mesmo pacote
       subclasses
-    super()
+    "`super()`"
       primeira instrução
       inicializa superclasse
     @Override
@@ -668,13 +668,6 @@ flowchart LR
 ---
 
 ### Exercício 1 — Fácil · 25 XP
-**Hierarquia Simples**
-
-Crie a hierarquia: `Veiculo` (placa, marca, ano) → `Carro` (numeroPortas) e `Moto` (cilindrada). Ambos devem ter `calcularIPVA()`: carros pagam 4% do valor estimado (ano × 50), motos pagam 2%. Use `protected` para os atributos da superclasse e `super()` nos construtores das subclasses.
-
----
-
-### Exercício 2 — Fácil · 25 XP
 **Is-A ou Has-A?**
 
 Para cada par abaixo, decida: a primeira classe **É-UM tipo** da segunda (herança) ou **TEM-UM** relacionamento com ela (composição)?
@@ -694,7 +687,72 @@ PAIR:Biblioteca|Livro:composicao:Correto! Biblioteca TEM vários Livros. Uma Bib
 
 ---
 
-### Exercício 3 — Médio · 25 XP
+### Exercício 2 — Troubleshooting · 25 XP
+**Diagnóstico: Herança Usada Incorretamente**
+
+O código abaixo tem **3 erros de herança** — leia, identifique cada bug e responda:
+
+```java
+class Animal {
+    private String nome;
+    private int idade;
+
+    Animal(String nome, int idade) {
+        this.nome  = nome;
+        this.idade = idade;
+    }
+
+    public String getNome()  { return nome;  }
+    public int    getIdade() { return idade; }
+    public void   emitirSom() { System.out.println("..."); }
+}
+
+class Cachorro extends Animal {
+    Cachorro(String nome, int idade) { super(nome, idade); }
+
+    void latir() {
+        System.out.println(nome + " está latindo!");  // linha problemática
+    }
+}
+
+class Gerente extends Funcionario {        // linha problemática
+    Funcionario subordinado;
+}
+
+class Peixe extends Animal {
+    Peixe(String nome) { super(nome, 0); }
+
+    @Override
+    public void emitirSom() {
+        throw new UnsupportedOperationException("Peixe não emite som"); // linha problemática
+    }
+}
+```
+
+```bug-hunt
+BUG:1:System.out.println(nome + " está latindo!"):Dentro de Cachorro.latir() — referência ao campo nome de Animal
+Q:O que está errado nesta linha?:Acessa `nome` que é private em Animal — deveria usar getNome()|Falta @Override antes de void latir()|super() foi chamado com argumentos errados|O método latir() deveria ser static:0
+Q:Qual conceito OO foi violado?:Encapsulamento — private só é visível na própria classe que o declara|É-UM vs TEM-UM — herança incorreta|LSP — subclasse quebra o contrato da superclasse|Upcasting implícito inválido:0
+
+BUG:2:class Gerente extends Funcionario:Gerente usa herança só para ter acesso aos dados de Funcionario
+Q:O que está errado aqui?:Usa herança para reutilizar dados sem que Gerente seja realmente um tipo de Funcionario|Acessa campo private de Funcionario diretamente|@Override foi usado com assinatura diferente da superclasse|Falta chamar super() no construtor de Gerente:0
+Q:Qual conceito OO foi violado?:É-UM vs TEM-UM — herança só faz sentido quando a relação É-UM é real|Encapsulamento — private vs protected|super() na cadeia de construtores|@Override — regras de assinatura:0
+
+BUG:3:throw new UnsupportedOperationException("Peixe não emite som"):Dentro de Peixe.emitirSom() — desativa o método herdado
+Q:O que está errado aqui?:A subclasse quebra o contrato — código que usa Animal espera poder chamar emitirSom() sem exceção|Falta getNome() no corpo do método|@Override não pode ser usado quando o método lança exceção|super.emitirSom() deveria ser chamado antes do throw:0
+Q:Qual conceito OO foi violado?:LSP — a subclasse deve honrar o contrato da superclasse|Encapsulamento — acesso a campos privados|É-UM vs TEM-UM — herança incorreta|Upcasting — referência de superclasse inválida:0
+```
+
+---
+
+### Exercício 3 — Fácil · 25 XP
+**Hierarquia Simples**
+
+Crie a hierarquia: `Veiculo` (placa, marca, ano) → `Carro` (numeroPortas) e `Moto` (cilindrada). Ambos devem ter `calcularIPVA()`: carros pagam 4% do valor estimado (ano × 50), motos pagam 2%. Use `protected` para os atributos da superclasse e `super()` nos construtores das subclasses.
+
+---
+
+### Exercício 4 — Médio · 25 XP
 **Extração Bottom-Up**
 
 Você tem as três classes abaixo com duplicação. Extraia a superclasse `Animal` com os atributos e métodos comuns, e refatore cada subclasse para usar `extends` e `super()`:
@@ -722,7 +780,7 @@ class Passaro {
 
 ---
 
-### Exercício 4 — Médio · 25 XP
+### Exercício 5 — Médio · 25 XP
 **Sistema de Contas Bancárias**
 
 Crie a hierarquia: `Conta` → `ContaCorrente` e `ContaPoupanca`.
@@ -734,62 +792,9 @@ Use `super()` no construtor de cada subclasse. No `main`, coloque as duas em um 
 
 ---
 
-### Exercício 5 — Difícil · 25 XP
+### Exercício 6 — Difícil · 25 XP
 **Sistema de Formas Geométricas**
 
 Crie a hierarquia: `FormaGeometrica` (cor) → `Circulo` (raio), `Retangulo` (base, altura), `Triangulo` (base, altura). Cada forma implementa `calcularArea()` e `calcularPerimetro()`. A superclasse tem `exibir()` que imprime cor + área + perímetro.
 
 Crie um array `FormaGeometrica[]` com pelo menos 5 formas. Use `instanceof` para identificar o tipo de cada forma. Calcule a soma de todas as áreas e encontre a forma com maior perímetro.
-
----
-
-### Exercício 6 — Troubleshooting · 25 XP
-**Diagnóstico: Herança Usada Incorretamente**
-
-O código abaixo tem **3 erros de herança**. Um acessa campo `private` da superclasse diretamente, um usa herança onde deveria ser composição, e um "desativa" método herdado — sinal claro de violação do LSP. Identifique e corrija cada um:
-
-```java
-class Animal {
-    private String nome;
-    private int idade;
-
-    Animal(String nome, int idade) {
-        this.nome  = nome;
-        this.idade = idade;
-    }
-
-    public String getNome() { return nome; }
-    public int    getIdade(){ return idade;}
-    public void   emitirSom(){ System.out.println("..."); }
-}
-
-class Cachorro extends Animal {
-    Cachorro(String nome, int idade) {
-        super(nome, idade);
-    }
-
-    void latir() {
-        // Erro 1: tenta acessar campo 'nome' que é private na superclasse
-        System.out.println(nome + " está latindo!");   // não compila
-    }
-}
-
-// Erro 2: Gerente herda de Funcionario só para ter os dados —
-// mas Gerente TEM-UM subordinado, não É-UM tipo especial de Funcionario neste contexto
-class Gerente extends Funcionario {
-    Funcionario subordinado;   // composição DENTRO de herança desnecessária
-}
-
-// Erro 3: desativar método herdado com throw — violação do LSP
-class Peixe extends Animal {
-    Peixe(String nome) { super(nome, 0); }
-
-    @Override
-    public void emitirSom() {
-        throw new UnsupportedOperationException("Peixe não emite som");
-        // Quebra o contrato: quem usa Animal espera poder chamar emitirSom() sem exceção
-    }
-}
-```
-
-> **Dicas:** (1) Use `getNome()` em vez de acessar `nome` diretamente. (2) Se "Gerente É-UM Funcionario?" não tem resposta clara, use composição. (3) Se uma subclasse não pode honrar o contrato da superclasse, ela não deve herdar — crie uma hierarquia separada ou use interface.
