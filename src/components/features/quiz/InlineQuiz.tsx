@@ -48,7 +48,7 @@ export function InlineQuiz({ slug, xp, onComplete, onFinish, alreadyCompleted = 
       setScore(correctCount)
       setFinished(true)
       onFinish?.(correctCount, questions.length)
-      if (!alreadyCompleted) onComplete()
+      if (!alreadyCompleted && correctCount === questions.length) onComplete()
     } else {
       setCurrent((c) => c + 1)
       setSelected(null)
@@ -68,14 +68,14 @@ export function InlineQuiz({ slug, xp, onComplete, onFinish, alreadyCompleted = 
   // ── Tela de resultado ────────────────────────────────────────────────────────
   if (finished) {
     const pct    = Math.round((score / questions.length) * 100)
-    const passed = pct >= 60
+    const perfect = score === questions.length
 
     return (
       <div className="rounded-2xl border bg-card p-8 flex flex-col items-center gap-6 text-center">
-        <Trophy size={48} className={cn(passed ? 'text-amber-400' : 'text-muted-foreground')} />
+        <Trophy size={48} className={cn(perfect ? 'text-amber-400' : 'text-muted-foreground')} />
         <div className="space-y-1">
           <h2 className="text-2xl font-bold">
-            {passed ? 'Questionário concluído! 🎉' : 'Questionário encerrado'}
+            {perfect ? 'Perfeito! 10/10 🎉' : 'Questionário encerrado'}
           </h2>
           <p className="text-muted-foreground text-sm">
             {score} de {questions.length} questões corretas ({pct}%)
@@ -86,26 +86,32 @@ export function InlineQuiz({ slug, xp, onComplete, onFinish, alreadyCompleted = 
         <div className="w-full max-w-xs">
           <div className="h-3 rounded-full bg-muted overflow-hidden">
             <div
-              className={cn('h-full rounded-full transition-all', passed ? 'bg-green-500' : 'bg-amber-500')}
+              className={cn('h-full rounded-full transition-all', perfect ? 'bg-green-500' : 'bg-amber-500')}
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
 
-        {passed && !alreadyCompleted && (
+        {perfect && !alreadyCompleted && (
           <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold">
             <CheckCircle size={18} />
             +{xp} XP conquistados
           </div>
         )}
 
-        {alreadyCompleted && (
+        {alreadyCompleted && perfect && (
           <p className="text-xs text-muted-foreground">Você já havia concluído este questionário.</p>
+        )}
+
+        {!perfect && (
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            É necessário 10/10 para concluir. Revise o conteúdo e tente novamente!
+          </div>
         )}
 
         <Button variant="outline" onClick={handleRestart} className="gap-2">
           <RotateCcw size={15} />
-          Refazer questionário
+          {perfect ? 'Refazer questionário' : 'Tentar novamente'}
         </Button>
       </div>
     )

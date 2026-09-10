@@ -39,8 +39,8 @@ export default function QuestionariosAdminPage() {
   }))
   rows.sort((a, b) => (b.result?.pct ?? -1) - (a.result?.pct ?? -1))
 
-  const submitted  = rows.filter((r) => r.result).length
-  const avgPct     = submitted > 0
+  const submitted = rows.filter((r) => r.result).length
+  const avgPct    = submitted > 0
     ? Math.round(resultsForSlug.reduce((s, r) => s + r.pct, 0) / submitted)
     : null
 
@@ -90,7 +90,7 @@ export default function QuestionariosAdminPage() {
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="Alunos responderam" value={`${submitted} / ${students.length}`} />
             <StatCard label="Média da turma" value={avgPct !== null ? `${avgPct}%` : '—'} highlight={avgPct !== null} />
-            <StatCard label="Aprovados (≥ 60%)" value={`${resultsForSlug.filter((r) => r.pct >= 60).length}`} />
+            <StatCard label="Concluídos (10/10)" value={`${resultsForSlug.filter((r) => r.pct === 100).length}`} />
           </div>
 
           {/* Tabela */}
@@ -107,7 +107,7 @@ export default function QuestionariosAdminPage() {
               </thead>
               <tbody>
                 {rows.map(({ student, result }, idx) => {
-                  const passed = result ? result.pct >= 60 : null
+                  const passed = result ? result.pct === 100 : null
                   return (
                     <tr key={student.uid} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3 text-muted-foreground text-xs">{idx + 1}</td>
@@ -142,13 +142,13 @@ export default function QuestionariosAdminPage() {
                       <td className="px-4 py-3 text-center">
                         {result === null ? (
                           <span className="text-xs text-muted-foreground/50">Não respondeu</span>
-                        ) : passed ? (
+                        ) : result.pct === 100 ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
-                            <CheckCircle size={11} /> Aprovado
+                            <CheckCircle size={11} /> 10/10 ✓
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
-                            <XCircle size={11} /> Abaixo de 60%
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                            <XCircle size={11} /> Refazendo
                           </span>
                         )}
                       </td>

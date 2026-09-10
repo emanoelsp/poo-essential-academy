@@ -181,7 +181,7 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
           alreadyCompleted={completed}
           onComplete={handleComplete}
           onFinish={(score, total) => {
-            if (!user || completed) return
+            if (!user) return
             saveQuizResult({
               uid:            user.uid,
               studentName:    profile?.displayName || user.displayName || user.email?.split('@')[0] || 'Aluno',
