@@ -69,6 +69,9 @@ export default async function EncounterPage({ params }: { params: Promise<{ slug
           {encounter.type === 'bonus' && (
             <Badge className="bg-teal-100 text-teal-800 border-teal-200">🎁 Bônus</Badge>
           )}
+          {encounter.type === 'questionario' && (
+            <Badge className="bg-amber-100 text-amber-800 border-amber-200">📋 Questionário de Fechamento</Badge>
+          )}
           {encounter.number > 0 && (
             <Badge variant="outline">Encontro {encounter.number}</Badge>
           )}

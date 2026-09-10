@@ -35,7 +35,7 @@ export interface Encounter {
   number: number
   title: string
   module: number
-  type: 'teoria' | 'lab' | 'avaliacao' | 'prova' | 'apresentacao' | 'desafio' | 'bonus' | 'complementar'
+  type: 'teoria' | 'lab' | 'questionario' | 'apresentacao' | 'desafio' | 'bonus' | 'complementar'
   xp: number
   exercises: number
   challengeTasks?: ChallengeTask[]

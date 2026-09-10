@@ -1,20 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { Lock, CheckCircle, BookOpen, FlaskConical, Trophy, FileText, Mic, Sword, Gift, PlusCircle } from 'lucide-react'
+import { Lock, CheckCircle, BookOpen, FlaskConical, ClipboardList, Mic, Sword, Gift, PlusCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Encounter } from '@/types'
 import { useGamificationStore } from '@/stores/gamificationStore'
 
 const TYPE_CONFIG = {
-  teoria:      { icon: BookOpen,     label: 'Teoria + Lab',  color: 'text-blue-700   dark:text-blue-400'   },
-  lab:         { icon: FlaskConical, label: 'Laboratório',   color: 'text-green-700  dark:text-green-400'  },
-  avaliacao:   { icon: Trophy,       label: 'Avaliação',     color: 'text-amber-700  dark:text-amber-400'  },
-  prova:       { icon: FileText,     label: 'Prova',         color: 'text-red-700    dark:text-red-400'    },
-  apresentacao:{ icon: Mic,          label: 'Apresentação',  color: 'text-purple-700 dark:text-purple-400' },
-  desafio:     { icon: Sword,        label: 'Desafio',       color: 'text-amber-700  dark:text-amber-400'  },
-  bonus:       { icon: Gift,         label: 'Bônus',         color: 'text-teal-700   dark:text-teal-400'   },
-  complementar:{ icon: PlusCircle,   label: 'Complementar',  color: 'text-violet-700 dark:text-violet-400' },
+  teoria:       { icon: BookOpen,       label: 'Teoria + Lab',                    color: 'text-blue-700   dark:text-blue-400'   },
+  lab:          { icon: FlaskConical,   label: 'Laboratório',                     color: 'text-green-700  dark:text-green-400'  },
+  questionario: { icon: ClipboardList,  label: 'Questionário de Fechamento',       color: 'text-amber-700  dark:text-amber-400'  },
+  apresentacao: { icon: Mic,            label: 'Apresentação',                     color: 'text-purple-700 dark:text-purple-400' },
+  desafio:      { icon: Sword,          label: 'Desafio',                          color: 'text-amber-700  dark:text-amber-400'  },
+  bonus:        { icon: Gift,           label: 'Bônus',                            color: 'text-teal-700   dark:text-teal-400'   },
+  complementar: { icon: PlusCircle,     label: 'Complementar',                     color: 'text-violet-700 dark:text-violet-400' },
 }
 
 interface EncounterCardProps {

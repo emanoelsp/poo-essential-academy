@@ -31,7 +31,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-03', number: 3,  title: 'Transição de Paradigma — Classes e Objetos I',     module: 2, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-04', number: 4,  title: 'Gerenciamento de Estado — Classes e Objetos II',   module: 2, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-05', number: 5,  title: 'Engenharia de Requisitos e Modelagem',             module: 2, type: 'teoria',    xp: 50,  exercises: 4 },
-      { slug: 'encontro-06', number: 6,  title: 'Atividade Prática 1',                              module: 2, type: 'avaliacao', xp: 150, exercises: 1 },
+      { slug: 'encontro-06', number: 6,  title: 'Atividade Prática 1',                              module: 2, type: 'questionario', xp: 150, exercises: 1 },
       { slug: 'colecoes-01', number: 0, title: 'Coleções — ArrayList, List e Iteração',             module: 2, type: 'complementar', xp: 60, exercises: 6 },
       { slug: 'colecoes-02', number: 0, title: 'Map, Set e Generics',                               module: 2, type: 'complementar', xp: 60, exercises: 5 },
       {
@@ -57,7 +57,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-09', number: 9,  title: 'Revisão Geral e Laboratório de Fixação',                  module: 3, type: 'lab',    xp: 50,  exercises: 8 },
       { slug: 'excecoes-01', number: 0,  title: 'Hierarquia de Exceções — checked vs unchecked',            module: 3, type: 'complementar', xp: 60, exercises: 5 },
       { slug: 'excecoes-02', number: 0,  title: 'Exceções de Domínio e Custom Exceptions',                  module: 3, type: 'complementar', xp: 60, exercises: 5 },
-      { slug: 'encontro-10', number: 10, title: 'Avaliação Objetiva',                                       module: 3, type: 'prova',  xp: 150, exercises: 0 },
+      { slug: 'encontro-10', number: 10, title: 'Questionário de Fechamento — Módulo 3',                    module: 3, type: 'questionario', xp: 150, exercises: 0 },
       {
         slug: 'desafio-m03', number: 0, title: '⚔️ Desafio do Módulo 3 — JOptionPane + Encapsulamento',    module: 3, type: 'desafio', xp: 160, exercises: 0,
         challengeTasks: [
@@ -79,7 +79,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-11', number: 11, title: 'Generalização e Especialização — Herança I', module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-12', number: 12, title: 'Mecânica de Herança — Herança II',           module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-13', number: 13, title: 'Classes Abstratas',                           module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
-      { slug: 'encontro-14', number: 14, title: 'Trabalho Prático 2',                          module: 4, type: 'avaliacao', xp: 150, exercises: 1 },
+      { slug: 'encontro-14', number: 14, title: 'Trabalho Prático 2',                          module: 4, type: 'questionario', xp: 150, exercises: 1 },
       {
         slug: 'desafio-m04', number: 0, title: '⚔️ Desafio do Módulo 4 — JOptionPane + Herança', module: 4, type: 'desafio', xp: 180, exercises: 0,
         challengeTasks: [
@@ -121,8 +121,8 @@ export const CURRICULUM: Module[] = [
     description: 'Integração de todos os pilares da POO em um projeto arquitetural real com defesa oral.',
     color: 'from-rose-600 to-rose-800',
     encounters: [
-      { slug: 'encontro-18', number: 18, title: 'Trabalho Prático 3 — Design e Arquitetura',      module: 6, type: 'avaliacao',   xp: 150, exercises: 0 },
-      { slug: 'encontro-19', number: 19, title: 'Trabalho Prático 3 — Desenvolvimento Intensivo', module: 6, type: 'avaliacao',   xp: 150, exercises: 0 },
+      { slug: 'encontro-18', number: 18, title: 'Trabalho Prático 3 — Design e Arquitetura',      module: 6, type: 'questionario',   xp: 150, exercises: 0 },
+      { slug: 'encontro-19', number: 19, title: 'Trabalho Prático 3 — Desenvolvimento Intensivo', module: 6, type: 'questionario',   xp: 150, exercises: 0 },
       { slug: 'encontro-20', number: 20, title: 'Defesa Arquitetural e Encerramento',             module: 6, type: 'apresentacao', xp: 200, exercises: 0 },
       {
         slug: 'desafio-m06', number: 0, title: '⚔️ Desafio Final — JOptionPane + SOLID Completo', module: 6, type: 'desafio', xp: 250, exercises: 0,

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ContentRenderer } from '@/components/features/course/ContentRenderer'
 import { ChallengeTracker } from '@/components/features/course/ChallengeTracker'
+import { InlineQuiz } from '@/components/features/quiz/InlineQuiz'
+import { getQuizQuestions } from '@/content/data/quizQuestions'
 import { useGamificationStore } from '@/stores/gamificationStore'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -135,9 +137,11 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
     )
   }
 
-  const showGabarito = isGabaritoVisible(encounter.slug)
-  const isChallenge  = encounter.type === 'desafio'
-  const isBonus      = encounter.type === 'bonus'
+  const showGabarito    = isGabaritoVisible(encounter.slug)
+  const isChallenge     = encounter.type === 'desafio'
+  const isBonus         = encounter.type === 'bonus'
+  const isQuestionario  = encounter.type === 'questionario'
+  const hasInlineQuiz   = isQuestionario && getQuizQuestions(encounter.slug).length > 0
 
   const { isChallengeTaskDone } = useGamificationStore()
   const allTasksDone = isChallenge && encounter.challengeTasks
@@ -169,17 +173,29 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
         />
       )}
 
-      <div ref={articleRef}>
-        <ContentRenderer content={content} showGabarito={showGabarito} encounterSlug={encounter.slug} />
-      </div>
-
-      {/* Bottom challenge tracker repeat for bonus/long content */}
-      {isBonus && encounter.challengeTasks && encounter.challengeTasks.length > 0 && (
-        <ChallengeTracker
+      {/* Questionário inline — substitui o conteúdo markdown */}
+      {hasInlineQuiz ? (
+        <InlineQuiz
           slug={encounter.slug}
-          tasks={encounter.challengeTasks}
           xp={encounter.xp}
+          alreadyCompleted={completed}
+          onComplete={handleComplete}
         />
+      ) : (
+        <>
+          <div ref={articleRef}>
+            <ContentRenderer content={content} showGabarito={showGabarito} encounterSlug={encounter.slug} />
+          </div>
+
+          {/* Bottom challenge tracker repeat for bonus/long content */}
+          {isBonus && encounter.challengeTasks && encounter.challengeTasks.length > 0 && (
+            <ChallengeTracker
+              slug={encounter.slug}
+              tasks={encounter.challengeTasks}
+              xp={encounter.xp}
+            />
+          )}
+        </>
       )}
 
       <div className="flex flex-col items-center gap-3 pt-6 border-t">
@@ -273,7 +289,7 @@ export function EncounterContent({ content, encounter }: EncounterContentProps) 
               )}
             </div>
           )
-        ) : (
+        ) : hasInlineQuiz ? null : (
           <>
             <p className="text-xs text-muted-foreground">
               Leu o conteúdo e fez os exercícios? Marque como concluído para ganhar XP.

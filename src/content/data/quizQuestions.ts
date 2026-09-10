@@ -5,6 +5,58 @@ export interface QuizQuestion {
 }
 
 export const QUIZ_BANK: Record<string, QuizQuestion[]> = {
+  'encontro-10': [
+    {
+      question: 'Em Java, declarar um atributo como `private` significa que:',
+      options: ['Ele não pode ser alterado após a criação do objeto', 'Só pode ser acessado dentro da própria classe', 'É compartilhado entre todas as instâncias', 'Não pode ser usado em subclasses'],
+      correct: 1,
+    },
+    {
+      question: 'O que é uma invariante de classe?',
+      options: ['Um método que nunca muda de comportamento', 'Uma condição que deve ser sempre verdadeira para o objeto existir em estado válido', 'Um atributo declarado como final', 'Um construtor sem parâmetros'],
+      correct: 1,
+    },
+    {
+      question: 'Qual o principal objetivo de um setter com validação?',
+      options: ['Tornar o código mais lento', 'Garantir que o atributo nunca receba um valor que viole as regras de negócio', 'Expor o atributo privado', 'Substituir o construtor'],
+      correct: 1,
+    },
+    {
+      question: 'O princípio "Tell, Don\'t Ask" diz que:',
+      options: ['Devemos sempre verificar o estado do objeto antes de usá-lo', 'Devemos mandar o objeto executar uma ação em vez de perguntar seu estado e decidir fora', 'Nunca devemos usar getters', 'Toda validação deve ficar no main'],
+      correct: 1,
+    },
+    {
+      question: 'Por que criar uma `SaldoInsuficienteException` em vez de usar `RuntimeException("saldo insuficiente")`?',
+      options: ['Não há diferença, são equivalentes', 'Custom exceptions nomeadas revelam o vocabulário do domínio e permitem catch seletivo', 'RuntimeException é mais rápida', 'Custom exceptions são sempre checked'],
+      correct: 1,
+    },
+    {
+      question: 'Exceções de domínio devem herdar de `RuntimeException` (unchecked) porque:',
+      options: ['Unchecked são mais seguras', 'Violações de regra de negócio não são condições externas — não faz sentido obrigar try-catch em todo lugar', 'O compilador exige isso', 'Checked exceptions foram removidas no Java 17'],
+      correct: 1,
+    },
+    {
+      question: 'Guard clause com `throw` no início do método serve para:',
+      options: ['Aumentar a performance do método', 'Eliminar aninhamento — cada validação que falha encerra o método, deixando a lógica real no nível zero', 'Substituir o bloco finally', 'Evitar o uso de try-catch'],
+      correct: 1,
+    },
+    {
+      question: '`Objects.requireNonNull(titular, "Titular não pode ser nulo")` no construtor garante:',
+      options: ['Que o atributo será final', 'Que o objeto nunca é criado com o campo nulo — invariante protegida desde a construção', 'Que o compilador emite erro', 'Que o garbage collector age imediatamente'],
+      correct: 1,
+    },
+    {
+      question: 'Quando usar `Optional<T>` em vez de lançar exception?',
+      options: ['Sempre — Optional é mais moderno', 'Quando a ausência do valor é um comportamento normal e esperado (ex: busca sem resultado)', 'Quando a ausência é um erro do chamador', 'Apenas em coleções'],
+      correct: 1,
+    },
+    {
+      question: 'Na hierarquia de exceptions de domínio, qual a vantagem de ter uma exception-raiz como `SistemaBancarioException`?',
+      options: ['Elimina a necessidade de catch específicos', 'Permite capturar qualquer erro do domínio com um único catch, mas ainda permite catch seletivo quando necessário', 'Melhora a performance em runtime', 'É exigida pelo compilador para custom exceptions'],
+      correct: 1,
+    },
+  ],
   'excecoes-01': [
     {
       question: 'Qual dessas exceções é CHECKED?',
