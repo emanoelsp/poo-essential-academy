@@ -3,14 +3,15 @@
 import { useEffect, useState } from 'react'
 import { getAllQuizResults, getAllStudents, type QuizResult, type UserProfile } from '@/lib/firestore'
 import { CURRICULUM } from '@/content/data/curriculum'
+import { getQuizQuestions } from '@/content/data/quizQuestions'
 import { RefreshCw, ClipboardList, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const QUIZ_ENCOUNTERS = CURRICULUM.flatMap((m) =>
   m.encounters
-    .filter((e) => e.type === 'questionario')
-    .map((e) => ({ slug: e.slug, title: e.title, module: m.number, xp: e.xp }))
+    .filter((e) => e.type === 'questionario' && getQuizQuestions(e.slug).length > 0)
+    .map((e) => ({ slug: e.slug, title: e.title, module: m.number, xp: e.xp, total: getQuizQuestions(e.slug).length }))
 )
 
 export default function QuestionariosAdminPage() {
@@ -73,7 +74,7 @@ export default function QuestionariosAdminPage() {
             )}
           >
             <ClipboardList size={14} />
-            M{e.module} — {e.title.replace('Questionário de Fechamento — ', '')}
+            Módulo {e.module} · {e.total}q
           </button>
         ))}
       </div>
