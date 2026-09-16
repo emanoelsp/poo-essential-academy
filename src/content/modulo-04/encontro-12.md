@@ -131,17 +131,33 @@ sequenceDiagram
 
 ### Atividade — Preveja a saída: cadeia de construtores
 
-Antes de executar o Exercício 1, rastreie a ordem. Os construtores sobem até o topo antes de executar seus corpos — preencha o que aparece no console em cada etapa.
+Olhe para as três classes abaixo. Ao chamar `new Z()`, qual linha aparece **primeiro** no console?
 
-```code-trace
-KEY:e12-chain
-SCENARIO: new Z() é chamado. A execução sobe Z → Y(5) → X(5) antes de voltar e imprimir. Em que ordem exata as linhas aparecem?
-STEP:Z() chama super(5) → suspende. Y(5) chama super(5) → suspende. X(5) executa seu corpo.
-VAR:saída do 1º println:String:X(5)
-STEP:X(5) termina → Y(5) retoma e executa o println após super(5).
-VAR:saída do 2º println:String:Y(5)
-STEP:Y(5) termina → Z() retoma e executa o println após super(5).
-VAR:saída do 3º println:String:Z()
+```java
+class X {
+    X()      { System.out.println("X()");          }
+    X(int n) { System.out.println("X(" + n + ")"); }
+}
+class Y extends X {
+    Y()      { System.out.println("Y()");          }
+    Y(int n) { super(n); System.out.println("Y(" + n + ")"); }
+}
+class Z extends Y {
+    Z() { super(5); System.out.println("Z()"); }
+}
+
+// O que aparece ao chamar: new Z() ?
+```
+
+> **Dica:** cada construtor chama `super()` **antes** de imprimir qualquer coisa. A cadeia toda sobe até o topo antes de o primeiro `println` rodar.
+
+```fill-table
+COL1:Ordem no console
+COL2:O que é impresso
+LEGEND:Não compile ainda — preveja na sua cabeça e preencha. Clique fora do campo para verificar.
+1ª linha | X(5)
+2ª linha | Y(5)
+3ª linha | Z()
 ```
 
 ---
