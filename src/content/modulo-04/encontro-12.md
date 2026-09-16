@@ -4,6 +4,22 @@
 
 ---
 
+### Atividade — Aquecimento: revise o Encontro 11
+
+```fill-table
+COL1:Situação ou regra
+COL2:Palavra-chave ou resposta curta
+LEGEND:Garanta que o E11 está sólido antes de avançar. Clique fora de cada campo para verificar.
+Palavra-chave Java que declara que uma classe herda de outra | extends
+Primeira instrução obrigatória no construtor de uma subclasse | super()
+Modificador de acesso específico para herança — subclasses acessam, mundo externo não | protected
+Anotação que faz o compilador validar que você está realmente sobrescrevendo um método | @Override
+Operador que verifica o tipo real de um objeto em tempo de execução | instanceof
+Quando um Horista é guardado em variável do tipo Funcionario, essa conversão chama-se | upcasting
+```
+
+---
+
 ## 1. A cadeia de construtores
 
 Quando criamos `new Horista(...)`, os construtores são chamados em **cadeia**, sempre do mais geral para o mais específico:
@@ -109,6 +125,23 @@ sequenceDiagram
     Veiculo-->>Carro: placa, marca, ano atribuídos
     Carro-->>CarroEletrico: numeroPortas atribuído
     CarroEletrico-->>main: objeto pronto
+```
+
+---
+
+### Atividade — Preveja a saída: cadeia de construtores
+
+Antes de executar o Exercício 1, rastreie a ordem. Os construtores sobem até o topo antes de executar seus corpos — preencha o que aparece no console em cada etapa.
+
+```code-trace
+KEY:e12-chain
+SCENARIO: new Z() é chamado. A execução sobe Z → Y(5) → X(5) antes de voltar e imprimir. Em que ordem exata as linhas aparecem?
+STEP:Z() chama super(5) → suspende. Y(5) chama super(5) → suspende. X(5) executa seu corpo.
+VAR:saída do 1º println:String:X(5)
+STEP:X(5) termina → Y(5) retoma e executa o println após super(5).
+VAR:saída do 2º println:String:Y(5)
+STEP:Y(5) termina → Z() retoma e executa o println após super(5).
+VAR:saída do 3º println:String:Z()
 ```
 
 ---
@@ -256,6 +289,22 @@ class ContaPremiada extends Conta {
 
 ---
 
+### Atividade — Trace as camadas: super.método() em ação
+
+Usando `Conta → ContaPremiada` da seção acima, rastreie cada etapa sem executar o código. Dados: `saldo = 1000`, `vip = true`.
+
+```fill-table
+COL1:O que está sendo calculado
+COL2:Valor numérico
+LEGEND:ContaPremiada.calcularRendimento() chama super.calcularRendimento() e acrescenta o bônus. Rastreie cada etapa separadamente antes de tentar o total.
+Conta.calcularRendimento() retorna (saldo × 0,005) | 5.0
+super.calcularRendimento() dentro de ContaPremiada retorna | 5.0
+Bônus calculado para vip=true (base × 0,5) | 2.5
+ContaPremiada.calcularRendimento() retorna (base + bonus) | 7.5
+```
+
+---
+
 ## 5. A classe `Object` — `toString`, `equals` e `hashCode`
 
 Em Java, toda classe herda implicitamente de `java.lang.Object`. Dois dos métodos mais importantes que `Object` fornece — e que quase sempre devemos sobrescrever — são `equals` e `hashCode`.
@@ -342,6 +391,20 @@ Set<Produto> catalogo = new HashSet<>();
 catalogo.add(p1);
 catalogo.add(p2); // sem hashCode: adiciona os dois — "duplicata" no set!
 System.out.println(catalogo.size()); // com hashCode correto: 1 ✅ | sem: 2 ❌
+```
+
+---
+
+### Atividade — Diagnose o contrato quebrado
+
+```bug-hunt
+BUG:1:System.out.println(p1.equals(p2)); // → false:Produto sem nenhum override de equals. p1 e p2 têm mesmo nome e preço, mas foram criados com new separadamente.
+Q:Por que equals() retorna false mesmo nome e preço sendo idênticos?:O equals() padrão herdado de Object compara referências (==) — p1 e p2 são objetos distintos na memória|equals() só funciona com tipos primitivos, não com objetos de classes customizadas|String.equals() propagaria automaticamente se os campos fossem public|@Override ativa comparação por valor automaticamente em qualquer método:0
+Q:Qual método deve ser sobrescrito para que a comparação seja por valor?:equals(Object obj) — implementando comparação campo a campo com instanceof|compareTo(Produto outro) — usado para ordenar objetos|toString() — usado para representação textual do objeto|clone() — usado para criar cópias independentes do objeto:0
+
+BUG:2:System.out.println(set.size()); // → 2 (esperado: 1):Produto com equals(Object) corretamente sobrescrito, mas hashCode() ainda usa o padrão de Object — dois objetos iguais por equals() produzem hashCodes distintos.
+Q:Por que o HashSet aceita p1 e p2 como elementos distintos mesmo com equals retornando true?:HashSet usa hashCode() para localizar o bucket antes de chamar equals — hashCodes diferentes fazem o set nem chegar a comparar os objetos|equals() funciona diferente dentro de coleções do que quando chamado diretamente|HashSet permite duplicatas quando os objetos são da mesma classe|O equals ainda compara referências internamente quando usado dentro do HashSet:0
+Q:Qual regra do contrato equals/hashCode foi violada?:Se a.equals(b) é true, então a.hashCode() deve ser igual a b.hashCode()|Se a.hashCode() == b.hashCode(), então a.equals(b) deve ser true|Sempre que equals é sobrescrito, toString() também deve ser sobrescrito|hashCode() deve retornar sempre zero quando equals não foi sobrescrito:0
 ```
 
 ---
