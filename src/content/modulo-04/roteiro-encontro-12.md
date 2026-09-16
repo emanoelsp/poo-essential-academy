@@ -573,25 +573,43 @@ Cada classe inicializa apenas os campos que ela própria declara. `Veiculo` não
 
 > 💬 **Condução sugerida:**
 >
-> Peça à turma que escreva a resposta no papel antes de compilar. Quem acertou a ordem valida na IDE. Quem errou: abra o debugger com breakpoints em cada construtor e execute passo a passo.
+> Peça à turma que escreva as três respostas no papel antes de compilar. O item c) é o mais revelador — muita gente não percebe que `new Y()` ativa `X()` sem argumento, não `X(int)`.
 
-**Resposta:**
+**a) `new Z()`**
 
 ```
-X(5)
-Y(5)
+X(42)
+Y(42)
 Z()
 ```
 
-**Justificativa linha a linha:**
+| Ordem | O que acontece | Imprime |
+|:-----:|---------------|:-------:|
+| 1 | `Z()` → `super(42)` → `Y(42)` → `super(42)` → `X(int 42)` executa | `X(42)` |
+| 2 | `X(42)` termina → `Y(42)` retoma e executa seu corpo | `Y(42)` |
+| 3 | `Y(42)` termina → `Z()` retoma e executa seu corpo | `Z()` |
 
-| Ordem | O que acontece | Linha impressa |
-|:-----:|---------------|:--------------:|
-| 1 | `Z()` → `super(5)` → entra em `Y(5)` → `super(5)` → entra em `X(int 5)` → corpo de `X(5)` executa | `X(5)` |
-| 2 | `X(5)` termina → volta para `Y(5)` → corpo de `Y(5)` após `super` executa | `Y(5)` |
-| 3 | `Y(5)` termina → volta para `Z()` → corpo de `Z()` após `super` executa | `Z()` |
+**b) `new Y(7)`**
 
-> 💡 **Pergunta de aprofundamento:** "E se `Z()` fosse `Z() { System.out.println("Z()"); super(5); }`?" — não compila. `super()` deve ser a primeira instrução — nenhum `println` pode preceder.
+```
+X(7)
+Y(7)
+```
+
+`Y(int n)` chama `super(n)` → entra em `X(int 7)` → imprime `X(7)`. `X(7)` termina → `Y(7)` imprime `Y(7)`. `Z` não participa — não foi chamado.
+
+**c) `new Y()`**
+
+```
+X()
+Y()
+```
+
+`Y()` sem argumento **não** tem `super()` explícito → Java insere `super()` implícito → entra em `X()` (sem argumento, não `X(int)`). `X()` imprime `X()`. `Y()` imprime `Y()`.
+
+> 💡 **Por que c) é importante:** muita gente assume que `new Y()` vai chamar `X(int)` de alguma forma. Não — Java insere `super()` sem argumentos, que mapeia para `X()`, o construtor sem parâmetros. Se `X` não tivesse esse construtor, não compilaria.
+>
+> **Pergunta de aprofundamento:** "E se `Z()` fosse `Z() { System.out.println("Z()"); super(42); }`?" — não compila. `super()` deve ser a primeira instrução.
 
 ---
 

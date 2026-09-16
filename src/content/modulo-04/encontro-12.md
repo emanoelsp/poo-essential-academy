@@ -415,23 +415,24 @@ Q:Qual regra do contrato equals/hashCode foi violada?:Se a.equals(b) é true, en
 ### Exercício 1 — Fácil · 25 XP
 **Rastreando a cadeia de construtores**
 
-Antes de compilar, escreva exatamente o que será impresso na ordem correta:
+Antes de compilar, escreva exatamente o que cada chamada imprime, na ordem correta. As três chamadas usam as mesmas classes — mas percorrem caminhos diferentes pela hierarquia:
 
 ```java
 class X {
-    X()        { System.out.println("X()");      }
+    X()        { System.out.println("X()");          }
     X(int n)   { System.out.println("X(" + n + ")"); }
 }
 class Y extends X {
-    Y()        { System.out.println("Y()");      }
+    Y()        { System.out.println("Y()");          }
     Y(int n)   { super(n); System.out.println("Y(" + n + ")"); }
 }
 class Z extends Y {
-    Z()        { super(5); System.out.println("Z()"); }
+    Z()        { super(42); System.out.println("Z()"); }
 }
 
-// new Z() imprime:
-// ???
+// a) new Z()   → imprime o quê, em que ordem?
+// b) new Y(7)  → imprime o quê, em que ordem?
+// c) new Y()   → imprime o quê, em que ordem?
 ```
 
 ---
