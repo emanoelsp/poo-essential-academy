@@ -129,35 +129,18 @@ sequenceDiagram
 
 ---
 
-### Atividade — Preveja a saída: cadeia de construtores
+### Atividade — Quem inicializa o quê na cadeia de construtores
 
-Olhe para as três classes abaixo. Ao chamar `new Z()`, qual linha aparece **primeiro** no console?
-
-```java
-class X {
-    X()      { System.out.println("X()");          }
-    X(int n) { System.out.println("X(" + n + ")"); }
-}
-class Y extends X {
-    Y()      { System.out.println("Y()");          }
-    Y(int n) { super(n); System.out.println("Y(" + n + ")"); }
-}
-class Z extends Y {
-    Z() { super(5); System.out.println("Z()"); }
-}
-
-// O que aparece ao chamar: new Z() ?
-```
-
-> **Dica:** cada construtor chama `super()` **antes** de imprimir qualquer coisa. A cadeia toda sobe até o topo antes de o primeiro `println` rodar.
+Ao chamar `new CarroEletrico("ABC-1", "Tesla", 2023, 4, 500)`, **todos os cinco parâmetros entram pelo mesmo construtor** — mas cada nível da hierarquia cuida apenas dos campos que são seus e repassa o restante via `super()`.
 
 ```fill-table
-COL1:Ordem no console
-COL2:O que é impresso
-LEGEND:Não compile ainda — preveja na sua cabeça e preencha. Clique fora do campo para verificar.
-1ª linha | X(5)
-2ª linha | Y(5)
-3ª linha | Z()
+COL1:Campo do objeto final
+COL2:Qual construtor é responsável por inicializá-lo
+placa = "ABC-1" | Veiculo
+marca = "Tesla" | Veiculo
+ano = 2023 | Veiculo
+numeroPortas = 4 | Carro
+autonomiaKm = 500 | CarroEletrico
 ```
 
 ---

@@ -137,21 +137,21 @@ Mostre o diagrama de sequência da seção 2 na plataforma. Destaque que o fluxo
 >
 > *(Resposta: o de `CarroEletrico` — ele é o último a começar e o último a terminar. O objeto só está 'pronto' quando o construtor mais específico fecha.)*
 
-### Atividade interativa na plataforma — code-trace
+### Atividade interativa na plataforma — fill-table
 
-Abra a atividade **"Preveja a saída: cadeia de construtores"** na plataforma.
+Abra a atividade **"Quem inicializa o quê na cadeia de construtores"** na plataforma.
 
 > 💬 **Fala do professor:**
 >
-> "Antes de rodar o Exercício 1 na IDE, quero que vocês façam na cabeça. Olhem para o código das classes X, Y e Z ali no exercício e preencham a atividade: qual linha é impressa primeiro, segunda, terceira? Façam individualmente. Não rodem o código ainda — esse é o ponto."
+> "Olhem para o `new CarroEletrico(...)` que acabamos de ver. Cinco parâmetros entram pelo mesmo construtor — mas cada um vai parar em um nível diferente da hierarquia. Qual construtor fica responsável por `placa`? Qual fica com `autonomiaKm`? Preencham a tabela individualmente."
 
 Dê 2 minutos. Depois revele em voz alta:
 
 > 💬 **Fala do professor:**
 >
-> "A resposta é: `X(5)`, depois `Y(5)`, depois `Z()`. Por quê? `Z()` chama `super(5)` → entra em `Y(5)`. `Y(5)` chama `super(5)` → entra em `X(5)`. `X(5)` não tem `super()` explícito → Java insere `super()` implícito → `Object` inicializa. Aí `X(5)` finalmente imprime `X(5)` e termina. Controle volta para `Y(5)`, que imprime `Y(5)` e termina. Controle volta para `Z()`, que imprime `Z()`.
+> "`placa`, `marca` e `ano` são inicializados por `Veiculo` — são campos de `Veiculo`, então só o construtor de `Veiculo` pode atribuí-los. `Carro` recebe `portas` como parâmetro e o atribui em `this.numeroPortas`. `CarroEletrico` recebe `autonomia` e atribui em `this.autonomiaKm`.
 >
-> Se você previu `Z()` primeiro — que é o que a intuição sugere — esse é o erro mais comum neste tópico. A cadeia sempre sobe até o topo antes de qualquer corpo executar."
+> Essa é a divisão de responsabilidades que o `super()` implementa. Cada nível cuida do que é seu e delega o restante para cima. Se amanhã `Veiculo` precisar de um campo novo, só o construtor de `Veiculo` muda — `Carro` e `CarroEletrico` apenas repassam o parâmetro via `super()` sem saber o que ele faz."
 
 ---
 
@@ -508,32 +508,23 @@ No E13, `Funcionario` vai virar uma classe abstrata com `calcularSalario()` abst
 
 ---
 
-### Atividade 2 — Preveja a saída: cadeia de construtores
+### Atividade 2 — Quem inicializa o quê na cadeia de construtores
 
-**Gabarito (ordem exata):**
+**Gabarito:**
 
-| Campo | Resposta |
-|-------|:--------:|
-| Saída do 1º println | `X(5)` |
-| Saída do 2º println | `Y(5)` |
-| Saída do 3º println | `Z()` |
+| Campo do objeto final | Construtor responsável |
+|-----------------------|:---------------------:|
+| `placa = "ABC-1"` | `Veiculo` |
+| `marca = "Tesla"` | `Veiculo` |
+| `ano = 2023` | `Veiculo` |
+| `numeroPortas = 4` | `Carro` |
+| `autonomiaKm = 500` | `CarroEletrico` |
 
-**Trace completo para o professor:**
+**Por que essa divisão importa:**
 
-```
-new Z()
-  └─ Z() inicia
-       └─ super(5) → entra em Y(5)
-            └─ super(5) → entra em X(5)
-                 └─ super() implícito → Object() inicializa e termina
-                 └─ println("X(5)") ← 1ª linha impressa
-            └─ Y(5) retoma após super(5)
-            └─ println("Y(5)") ← 2ª linha impressa
-  └─ Z() retoma após super(5)
-  └─ println("Z()") ← 3ª linha impressa
-```
+Cada classe inicializa apenas os campos que ela própria declara. `Veiculo` não sabe o que é `autonomiaKm` — e não precisa. `CarroEletrico` não sabe como `Veiculo` usa `placa` — só repassa. O `super()` é o mecanismo de delegação: "eu cuido do que é meu e passo o restante para cima".
 
-> 💡 **Se alguém errou:** o erro mais comum é colocar `Y()` ou `Z()` como primeira linha. Mostre o trace acima desenhado no quadro — a seta de "suspende" é o que falta no modelo mental da maioria.
+> 💡 **Se alguém colocou `CarroEletrico` para `placa`:** explique que `placa` é declarada como `protected String placa` em `Veiculo`. Quem declara o campo é quem o inicializa no construtor. `CarroEletrico` apenas repassa o valor via `super()` sem nenhuma atribuição direta.
 
 ---
 
