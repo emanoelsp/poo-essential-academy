@@ -6,82 +6,185 @@ import { PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Grid, HeroClass, EnemyState } from './types'
 
-// Camera offset relative to the hero (isometric-ish, ~45deg above)
 const CAM_OFFSET = { x: 8, y: 10, z: 8 }
 
-// Convert grid coordinates -> 3D world position.
-// x = col, z = row (y up)
 function gridToWorld(row: number, col: number): [number, number] {
   return [col, row]
 }
 
-// ─── Hero (Guerreiro / Mago) ────────────────────────────────────────────────
+// ─── Knight (Guerreiro) ───────────────────────────────────────────────────────
 
-interface HeroMeshProps {
-  heroClass: HeroClass
-  row: number
-  col: number
+function KnightMesh() {
+  const STEEL = { color: '#8899bb', metalness: 0.85, roughness: 0.15 } as const
+  const DARK  = { color: '#445566', metalness: 0.8,  roughness: 0.2  } as const
+  const GOLD  = { color: '#c8960c', metalness: 0.7,  roughness: 0.3  } as const
+
+  return (
+    <group>
+      {/* Legs */}
+      <mesh castShadow position={[-0.14, -0.1, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.38, 8]} />
+        <meshStandardMaterial {...DARK} />
+      </mesh>
+      <mesh castShadow position={[0.14, -0.1, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.38, 8]} />
+        <meshStandardMaterial {...DARK} />
+      </mesh>
+      {/* Torso — armored box */}
+      <mesh castShadow position={[0, 0.42, 0]}>
+        <boxGeometry args={[0.58, 0.7, 0.42]} />
+        <meshStandardMaterial {...STEEL} />
+      </mesh>
+      {/* Chest emblem */}
+      <mesh position={[0, 0.48, 0.22]}>
+        <boxGeometry args={[0.18, 0.22, 0.03]} />
+        <meshStandardMaterial {...GOLD} />
+      </mesh>
+      {/* Left shoulder pauldron */}
+      <mesh castShadow position={[-0.38, 0.65, 0]} rotation={[0, 0, 0.3]}>
+        <sphereGeometry args={[0.19, 12, 12]} />
+        <meshStandardMaterial {...STEEL} />
+      </mesh>
+      {/* Right shoulder pauldron */}
+      <mesh castShadow position={[0.38, 0.65, 0]} rotation={[0, 0, -0.3]}>
+        <sphereGeometry args={[0.19, 12, 12]} />
+        <meshStandardMaterial {...STEEL} />
+      </mesh>
+      {/* Helmet */}
+      <mesh castShadow position={[0, 1.03, 0]}>
+        <sphereGeometry args={[0.26, 16, 16]} />
+        <meshStandardMaterial {...STEEL} />
+      </mesh>
+      {/* Helmet visor */}
+      <mesh position={[0, 1.0, 0.22]}>
+        <boxGeometry args={[0.36, 0.1, 0.04]} />
+        <meshStandardMaterial color="#111827" metalness={0.5} roughness={0.5} />
+      </mesh>
+      {/* Red helmet plume */}
+      <mesh castShadow position={[0, 1.38, 0]}>
+        <cylinderGeometry args={[0.05, 0.03, 0.32, 8]} />
+        <meshStandardMaterial color="#cc2222" roughness={0.8} />
+      </mesh>
+      {/* Shield on left arm */}
+      <mesh castShadow position={[-0.52, 0.38, 0.12]} rotation={[0.1, -0.25, 0]}>
+        <boxGeometry args={[0.09, 0.58, 0.42]} />
+        <meshStandardMaterial color="#c8960c" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* Shield cross */}
+      <mesh position={[-0.47, 0.38, 0.14]}>
+        <boxGeometry args={[0.02, 0.38, 0.07]} />
+        <meshStandardMaterial color="#e8b020" metalness={0.6} />
+      </mesh>
+      <mesh position={[-0.47, 0.38, 0.14]}>
+        <boxGeometry args={[0.02, 0.07, 0.28]} />
+        <meshStandardMaterial color="#e8b020" metalness={0.6} />
+      </mesh>
+      {/* Sword */}
+      <mesh castShadow position={[0.54, 0.72, 0]} rotation={[0, 0, -0.25]}>
+        <boxGeometry args={[0.07, 0.76, 0.07]} />
+        <meshStandardMaterial color="#ddeeff" metalness={0.95} roughness={0.05} />
+      </mesh>
+      {/* Sword crossguard */}
+      <mesh position={[0.54, 0.48, 0]}>
+        <boxGeometry args={[0.28, 0.06, 0.07]} />
+        <meshStandardMaterial {...GOLD} />
+      </mesh>
+    </group>
+  )
 }
 
-function HeroMesh({ heroClass, row, col }: HeroMeshProps) {
+// ─── Mage (Mago) ─────────────────────────────────────────────────────────────
+
+function MageMesh() {
+  const ROBE  = { color: '#2d1b69', roughness: 0.9 } as const
+  const ROBE2 = { color: '#4c1d95', roughness: 0.8 } as const
+  const HAT   = { color: '#1e0b5e', roughness: 0.9 } as const
+
+  return (
+    <group>
+      {/* Wide robe bottom */}
+      <mesh castShadow position={[0, 0.18, 0]}>
+        <cylinderGeometry args={[0.44, 0.48, 0.5, 12]} />
+        <meshStandardMaterial {...ROBE} />
+      </mesh>
+      {/* Robe mid */}
+      <mesh castShadow position={[0, 0.55, 0]}>
+        <cylinderGeometry args={[0.32, 0.44, 0.42, 12]} />
+        <meshStandardMaterial {...ROBE} />
+      </mesh>
+      {/* Robe accent stripe front */}
+      <mesh position={[0, 0.38, 0.33]}>
+        <boxGeometry args={[0.1, 0.55, 0.02]} />
+        <meshStandardMaterial color="#7c3aed" emissive="#6d28d9" emissiveIntensity={1.2} />
+      </mesh>
+      {/* Arms */}
+      <mesh castShadow position={[-0.42, 0.55, 0]} rotation={[0, 0, 0.45]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.38, 8]} />
+        <meshStandardMaterial {...ROBE2} />
+      </mesh>
+      <mesh castShadow position={[0.42, 0.55, 0]} rotation={[0, 0, -0.45]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.38, 8]} />
+        <meshStandardMaterial {...ROBE2} />
+      </mesh>
+      {/* Head */}
+      <mesh castShadow position={[0, 1.02, 0]}>
+        <sphereGeometry args={[0.24, 16, 16]} />
+        <meshStandardMaterial color="#f0c88a" roughness={0.8} />
+      </mesh>
+      {/* Beard */}
+      <mesh castShadow position={[0, 0.85, 0.18]}>
+        <sphereGeometry args={[0.12, 8, 8]} />
+        <meshStandardMaterial color="#eeeeee" roughness={1} />
+      </mesh>
+      {/* Hat brim */}
+      <mesh castShadow position={[0, 1.24, 0]}>
+        <cylinderGeometry args={[0.4, 0.4, 0.06, 12]} />
+        <meshStandardMaterial {...HAT} />
+      </mesh>
+      {/* Tall pointed hat */}
+      <mesh castShadow position={[0, 1.68, 0]}>
+        <coneGeometry args={[0.28, 0.9, 12]} />
+        <meshStandardMaterial {...HAT} />
+      </mesh>
+      {/* Stars on hat */}
+      {([[0.18, 1.65, 0.2], [-0.14, 1.82, 0.12], [0.08, 2.0, -0.1]] as [number,number,number][]).map(([px, py, pz], i) => (
+        <mesh key={i} position={[px, py, pz]}>
+          <sphereGeometry args={[0.05, 6, 6]} />
+          <meshStandardMaterial color="#fde68a" emissive="#fbbf24" emissiveIntensity={3} />
+        </mesh>
+      ))}
+      {/* Staff */}
+      <mesh castShadow position={[0.44, 0.5, 0]} rotation={[0.08, 0, 0.12]}>
+        <cylinderGeometry args={[0.05, 0.05, 1.15, 8]} />
+        <meshStandardMaterial color="#5c3d00" roughness={0.85} />
+      </mesh>
+      {/* Staff crystal orb — big and glowing */}
+      <mesh position={[0.5, 1.18, 0.07]}>
+        <sphereGeometry args={[0.18, 16, 16]} />
+        <meshStandardMaterial color="#c4b5fd" emissive="#8b5cf6" emissiveIntensity={3.5} />
+      </mesh>
+      <pointLight position={[0.5, 1.18, 0.07]} color="#a78bfa" intensity={0.6} distance={4} />
+    </group>
+  )
+}
+
+// ─── Hero wrapper (handles movement + bob) ───────────────────────────────────
+
+function HeroMesh({ heroClass, row, col }: { heroClass: HeroClass; row: number; col: number }) {
   const groupRef = useRef<THREE.Group>(null)
   const [x, z] = gridToWorld(row, col)
 
   useFrame((state) => {
     if (!groupRef.current) return
-    // Smoothly move toward the target cell
     const t = groupRef.current.position
     t.x = THREE.MathUtils.lerp(t.x, x, 0.15)
     t.z = THREE.MathUtils.lerp(t.z, z, 0.15)
-    // Gentle bob
-    const bob = Math.sin(state.clock.elapsedTime * 2) * 0.05
-    t.y = 0.5 + bob
+    t.y = 0.5 + Math.sin(state.clock.elapsedTime * 2) * 0.05
   })
-
-  const bodyColor = heroClass === 'guerreiro' ? '#c0a060' : '#4040a0'
 
   return (
     <group ref={groupRef} position={[x, 0.5, z]}>
-      {/* Body */}
-      <mesh castShadow position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[0.3, 0.35, 0.8, 16]} />
-        <meshStandardMaterial color={bodyColor} />
-      </mesh>
-      {/* Head */}
-      <mesh castShadow position={[0, 0.95, 0]}>
-        <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial color="#f0c88a" />
-      </mesh>
-
-      {heroClass === 'guerreiro' ? (
-        // Sword in right hand
-        <mesh castShadow position={[0.4, 0.5, 0]} rotation={[0, 0, -Math.PI / 5]}>
-          <boxGeometry args={[0.05, 0.6, 0.05]} />
-          <meshStandardMaterial color="#aaaacc" metalness={0.7} roughness={0.3} />
-        </mesh>
-      ) : (
-        <>
-          {/* Wizard hat */}
-          <mesh castShadow position={[0, 1.35, 0]}>
-            <coneGeometry args={[0.28, 0.5, 16]} />
-            <meshStandardMaterial color="#2020a0" />
-          </mesh>
-          {/* Staff */}
-          <mesh castShadow position={[0.4, 0.55, 0]}>
-            <cylinderGeometry args={[0.04, 0.04, 0.9, 8]} />
-            <meshStandardMaterial color="#806000" />
-          </mesh>
-          {/* Glowing orb on staff */}
-          <mesh position={[0.4, 1.05, 0]}>
-            <sphereGeometry args={[0.1, 12, 12]} />
-            <meshStandardMaterial
-              color="#7dd3fc"
-              emissive="#38bdf8"
-              emissiveIntensity={1.5}
-            />
-          </mesh>
-        </>
-      )}
+      {heroClass === 'guerreiro' ? <KnightMesh /> : <MageMesh />}
     </group>
   )
 }
@@ -94,47 +197,94 @@ function EnemyMesh({ enemy }: { enemy: EnemyState }) {
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    groupRef.current.rotation.y += delta * 0.8
+    groupRef.current.rotation.y += delta * 0.7
   })
 
   if (!enemy.alive) return null
 
   return (
     <group ref={groupRef} position={[x, 0.5, z]}>
-      <mesh castShadow position={[0, 0.375, 0]}>
-        <cylinderGeometry args={[0.28, 0.32, 0.75, 16]} />
-        <meshStandardMaterial color="#8b0000" />
+      {/* Legs */}
+      <mesh castShadow position={[-0.12, -0.08, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.32, 8]} />
+        <meshStandardMaterial color="#6b0000" />
       </mesh>
-      <mesh castShadow position={[0, 0.9, 0]}>
-        <sphereGeometry args={[0.22, 16, 16]} />
-        <meshStandardMaterial color="#5a0000" />
+      <mesh castShadow position={[0.12, -0.08, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.32, 8]} />
+        <meshStandardMaterial color="#6b0000" />
       </mesh>
-      {/* Eyes */}
-      <mesh position={[0.09, 0.92, 0.18]}>
-        <sphereGeometry args={[0.035, 8, 8]} />
-        <meshStandardMaterial color="#ffee55" emissive="#ffcc00" emissiveIntensity={2} />
+      {/* Body */}
+      <mesh castShadow position={[0, 0.38, 0]}>
+        <boxGeometry args={[0.56, 0.64, 0.4]} />
+        <meshStandardMaterial color="#8b0000" roughness={0.7} />
       </mesh>
-      <mesh position={[-0.09, 0.92, 0.18]}>
-        <sphereGeometry args={[0.035, 8, 8]} />
-        <meshStandardMaterial color="#ffee55" emissive="#ffcc00" emissiveIntensity={2} />
+      {/* Spikes on back */}
+      {([-0.2, 0, 0.2] as number[]).map((ox, i) => (
+        <mesh key={i} castShadow position={[ox, 0.55, -0.26]} rotation={[0.5, 0, 0]}>
+          <coneGeometry args={[0.05, 0.28, 6]} />
+          <meshStandardMaterial color="#4a0000" />
+        </mesh>
+      ))}
+      {/* Head */}
+      <mesh castShadow position={[0, 0.88, 0]}>
+        <sphereGeometry args={[0.24, 16, 16]} />
+        <meshStandardMaterial color="#5a0000" roughness={0.6} />
       </mesh>
+      {/* Horns */}
+      <mesh castShadow position={[-0.16, 1.1, 0]} rotation={[0, 0, -0.5]}>
+        <coneGeometry args={[0.06, 0.3, 6]} />
+        <meshStandardMaterial color="#3a0000" />
+      </mesh>
+      <mesh castShadow position={[0.16, 1.1, 0]} rotation={[0, 0, 0.5]}>
+        <coneGeometry args={[0.06, 0.3, 6]} />
+        <meshStandardMaterial color="#3a0000" />
+      </mesh>
+      {/* Eyes — glowing yellow */}
+      <mesh position={[0.09, 0.9, 0.2]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#ffee44" emissive="#ffcc00" emissiveIntensity={4} />
+      </mesh>
+      <mesh position={[-0.09, 0.9, 0.2]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#ffee44" emissive="#ffcc00" emissiveIntensity={4} />
+      </mesh>
+      {/* Eye glow */}
+      <pointLight position={[0, 0.9, 0.2]} color="#ff8800" intensity={0.4} distance={2} />
     </group>
   )
 }
 
-// ─── Items ──────────────────────────────────────────────────────────────────
+// ─── Items ────────────────────────────────────────────────────────────────────
 
 function Chest({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0.5, z]}>
-      <mesh castShadow position={[0, 0.05, 0]}>
-        <boxGeometry args={[0.6, 0.45, 0.5]} />
-        <meshStandardMaterial color="#b45309" />
+      {/* Base */}
+      <mesh castShadow position={[0, 0.06, 0]}>
+        <boxGeometry args={[0.7, 0.52, 0.58]} />
+        <meshStandardMaterial color="#92400e" roughness={0.7} />
       </mesh>
-      <mesh castShadow position={[0, 0.32, 0]}>
-        <boxGeometry args={[0.6, 0.15, 0.5]} />
-        <meshStandardMaterial color="#92400e" />
+      {/* Lid */}
+      <mesh castShadow position={[0, 0.38, 0]}>
+        <boxGeometry args={[0.7, 0.17, 0.58]} />
+        <meshStandardMaterial color="#78350f" roughness={0.7} />
       </mesh>
+      {/* Gold trim horizontal */}
+      <mesh position={[0, 0.22, 0.3]}>
+        <boxGeometry args={[0.74, 0.06, 0.02]} />
+        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.5} metalness={0.8} />
+      </mesh>
+      {/* Gold trim vertical */}
+      <mesh position={[0, 0.06, 0.3]}>
+        <boxGeometry args={[0.06, 0.52, 0.02]} />
+        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.5} metalness={0.8} />
+      </mesh>
+      {/* Lock */}
+      <mesh position={[0, 0.26, 0.31]}>
+        <boxGeometry args={[0.14, 0.14, 0.03]} />
+        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={2} metalness={0.9} />
+      </mesh>
+      <pointLight position={[0, 0.3, 0.5]} color="#f59e0b" intensity={0.5} distance={2.5} />
     </group>
   )
 }
@@ -143,18 +293,23 @@ function ManaCrystal({ x, z }: { x: number; z: number }) {
   const ref = useRef<THREE.Mesh>(null)
   useFrame((state, delta) => {
     if (!ref.current) return
-    ref.current.rotation.y += delta * 1.2
-    ref.current.position.y = 0.55 + Math.sin(state.clock.elapsedTime * 2) * 0.08
+    ref.current.rotation.y += delta * 1.5
+    ref.current.position.y = 0.6 + Math.sin(state.clock.elapsedTime * 2.2) * 0.12
   })
   return (
-    <mesh ref={ref} position={[x, 0.55, z]}>
-      <octahedronGeometry args={[0.3, 0]} />
-      <meshStandardMaterial
-        color="#3b82f6"
-        emissive="#1d4ed8"
-        emissiveIntensity={0.8}
-      />
-    </mesh>
+    <group position={[x, 0, z]}>
+      <mesh ref={ref} position={[0, 0.6, 0]}>
+        <octahedronGeometry args={[0.42, 0]} />
+        <meshStandardMaterial
+          color="#60a5fa"
+          emissive="#3b82f6"
+          emissiveIntensity={2.5}
+          transparent
+          opacity={0.92}
+        />
+      </mesh>
+      <pointLight color="#3b82f6" intensity={1.2} distance={3.5} position={[0, 0.7, 0]} />
+    </group>
   )
 }
 
@@ -162,105 +317,214 @@ function LifeOrb({ x, z }: { x: number; z: number }) {
   const ref = useRef<THREE.Mesh>(null)
   useFrame((state) => {
     if (!ref.current) return
-    ref.current.position.y = 0.55 + Math.sin(state.clock.elapsedTime * 2.5) * 0.08
+    ref.current.position.y = 0.62 + Math.sin(state.clock.elapsedTime * 2.8) * 0.12
   })
   return (
-    <mesh ref={ref} position={[x, 0.55, z]}>
-      <sphereGeometry args={[0.28, 16, 16]} />
-      <meshStandardMaterial
-        color="#22c55e"
-        emissive="#15803d"
-        emissiveIntensity={0.8}
-      />
-    </mesh>
+    <group position={[x, 0, z]}>
+      <mesh ref={ref} position={[0, 0.62, 0]}>
+        <sphereGeometry args={[0.38, 20, 20]} />
+        <meshStandardMaterial
+          color="#4ade80"
+          emissive="#22c55e"
+          emissiveIntensity={2.5}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+      {/* Inner bright core */}
+      <mesh position={[0, 0.62, 0]}>
+        <sphereGeometry args={[0.2, 12, 12]} />
+        <meshStandardMaterial color="#bbf7d0" emissive="#86efac" emissiveIntensity={3} />
+      </mesh>
+      <pointLight color="#22c55e" intensity={1.2} distance={3.5} position={[0, 0.7, 0]} />
+    </group>
   )
 }
 
 function Trap({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
-      <mesh receiveShadow position={[0, 0.08, 0]}>
-        <boxGeometry args={[1, 0.15, 1]} />
-        <meshStandardMaterial color="#dc2626" />
+      {/* Red floor plate */}
+      <mesh receiveShadow position={[0, 0.09, 0]}>
+        <boxGeometry args={[0.95, 0.18, 0.95]} />
+        <meshStandardMaterial color="#dc2626" emissive="#991b1b" emissiveIntensity={0.8} />
       </mesh>
-      <mesh castShadow position={[0, 0.35, 0]}>
-        <coneGeometry args={[0.12, 0.35, 8]} />
-        <meshStandardMaterial color="#dc2626" emissive="#7f1d1d" emissiveIntensity={0.4} />
+      {/* Central spike */}
+      <mesh castShadow position={[0, 0.42, 0]}>
+        <coneGeometry args={[0.13, 0.52, 8]} />
+        <meshStandardMaterial color="#ef4444" emissive="#dc2626" emissiveIntensity={1.2} />
       </mesh>
+      {/* Corner spikes */}
+      {([[-0.28, 0.28, -0.28],[-0.28, 0.28, 0.28],[0.28, 0.28, -0.28],[0.28, 0.28, 0.28]] as [number,number,number][]).map(([px, py, pz], i) => (
+        <mesh key={i} castShadow position={[px, py, pz]}>
+          <coneGeometry args={[0.07, 0.32, 6]} />
+          <meshStandardMaterial color="#ef4444" emissive="#dc2626" emissiveIntensity={1} />
+        </mesh>
+      ))}
+      <pointLight color="#dc2626" intensity={0.8} distance={2.5} position={[0, 0.5, 0]} />
     </group>
   )
 }
 
 function Portal({ x, z }: { x: number; z: number }) {
-  const torusRef = useRef<THREE.Mesh>(null)
+  const outerRef = useRef<THREE.Mesh>(null)
+  const innerRef = useRef<THREE.Mesh>(null)
   const particlesRef = useRef<THREE.Points>(null)
 
   const particleGeom = useMemo(() => {
     const g = new THREE.BufferGeometry()
-    const count = 40
+    const count = 60
     const positions = new Float32Array(count * 3)
-    // Deterministic pseudo-random so the geometry is stable across renders.
-    const pseudo = (n: number) => {
-      const s = Math.sin(n * 127.1) * 43758.5453
-      return s - Math.floor(s)
-    }
+    const pseudo = (n: number) => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s) }
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2
-      const r = 0.3 + pseudo(i) * 0.25
-      positions[i * 3] = Math.cos(angle) * r
-      positions[i * 3 + 1] = (pseudo(i + 100) - 0.5) * 0.9
+      const r = 0.45 + pseudo(i) * 0.35
+      positions[i * 3]     = Math.cos(angle) * r
+      positions[i * 3 + 1] = (pseudo(i + 100) - 0.5) * 1.2
       positions[i * 3 + 2] = Math.sin(angle) * r
     }
     g.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     return g
   }, [])
 
-  useFrame((_, delta) => {
-    if (torusRef.current) torusRef.current.rotation.z += delta * 1.5
-    if (particlesRef.current) particlesRef.current.rotation.y += delta * 0.6
+  useFrame((state, delta) => {
+    if (outerRef.current)    outerRef.current.rotation.z += delta * 1.4
+    if (innerRef.current)    innerRef.current.rotation.z -= delta * 2.2
+    if (particlesRef.current) particlesRef.current.rotation.y += delta * 0.5
+    // Pulse
+    const pulse = 0.9 + Math.sin(state.clock.elapsedTime * 3) * 0.1
+    if (outerRef.current) outerRef.current.scale.setScalar(pulse)
   })
 
   return (
-    <group position={[x, 0.65, z]}>
-      <mesh ref={torusRef}>
-        <torusGeometry args={[0.45, 0.08, 16, 32]} />
-        <meshStandardMaterial
-          color="#22d3ee"
-          emissive="#06b6d4"
-          emissiveIntensity={1.2}
-        />
+    <group position={[x, 0.8, z]}>
+      {/* Outer ring */}
+      <mesh ref={outerRef}>
+        <torusGeometry args={[0.65, 0.1, 16, 48]} />
+        <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={3} />
+      </mesh>
+      {/* Inner ring */}
+      <mesh ref={innerRef}>
+        <torusGeometry args={[0.4, 0.06, 12, 32]} />
+        <meshStandardMaterial color="#a5f3fc" emissive="#67e8f9" emissiveIntensity={4} />
+      </mesh>
+      {/* Center disc glow */}
+      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.55, 32]} />
+        <meshStandardMaterial color="#0e7490" emissive="#0891b2" emissiveIntensity={1.5} transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
       <points ref={particlesRef} geometry={particleGeom}>
-        <pointsMaterial color="#67e8f9" size={0.06} sizeAttenuation transparent opacity={0.9} />
+        <pointsMaterial color="#67e8f9" size={0.08} sizeAttenuation transparent opacity={0.95} />
       </points>
+      <pointLight color="#22d3ee" intensity={2.5} distance={6} />
     </group>
   )
 }
 
-// ─── World (floors + walls) ───────────────────────────────────────────────────
+// ─── World — desert ruins ─────────────────────────────────────────────────────
+
+function prand(x: number, z: number, seed: number): number {
+  const n = Math.sin(x * 127.1 + z * 311.7 + seed * 74.3) * 43758.5453
+  return n - Math.floor(n)
+}
+
+const STONE_COLORS = ['#9e7c5a', '#7d5e3a', '#b8956a', '#8c7355', '#a08060'] as const
+
+function Rock({ x, z }: { x: number; z: number }) {
+  const t   = prand(x, z, 1)
+  const rot = prand(x, z, 2) * Math.PI * 2
+  const ci  = Math.floor(prand(x, z, 3) * STONE_COLORS.length)
+  const c   = STONE_COLORS[ci]
+  const h   = 0.8 + prand(x, z, 4) * 1.2
+  const sx  = 0.72 + prand(x, z, 5) * 0.38
+  const sz  = 0.72 + prand(x, z, 6) * 0.38
+
+  if (t < 0.35) {
+    // Single craggy boulder with a top slab
+    return (
+      <group position={[x, h * 0.5, z]} rotation={[0, rot, 0]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[sx, h, sz]} />
+          <meshStandardMaterial color={c} roughness={0.95} />
+        </mesh>
+        <mesh castShadow position={[sx * 0.08, h * 0.38, 0]}>
+          <boxGeometry args={[sx * 0.7, h * 0.28, sz * 0.75]} />
+          <meshStandardMaterial color={STONE_COLORS[(ci + 1) % STONE_COLORS.length]} roughness={1} />
+        </mesh>
+      </group>
+    )
+  } else if (t < 0.6) {
+    // Two-rock cluster
+    const h2 = 0.45 + prand(x, z, 8) * 0.75
+    const c2 = STONE_COLORS[Math.floor(prand(x, z, 7) * STONE_COLORS.length)]
+    return (
+      <group position={[x, 0, z]} rotation={[0, rot, 0]}>
+        <mesh castShadow receiveShadow position={[-0.18, h * 0.5, 0]}>
+          <boxGeometry args={[sx * 0.68, h, sz * 0.68]} />
+          <meshStandardMaterial color={c} roughness={0.95} />
+        </mesh>
+        <mesh castShadow receiveShadow position={[0.22, h2 * 0.5, 0.1]}>
+          <boxGeometry args={[sx * 0.5, h2, sz * 0.5]} />
+          <meshStandardMaterial color={c2} roughness={0.9} />
+        </mesh>
+      </group>
+    )
+  } else if (t < 0.8) {
+    // Broken column / ruins
+    const colH = 0.85 + prand(x, z, 9) * 0.9
+    return (
+      <group position={[x, 0, z]} rotation={[0, rot, 0]}>
+        <mesh castShadow receiveShadow position={[0, 0.1, 0]}>
+          <boxGeometry args={[0.82, 0.2, 0.82]} />
+          <meshStandardMaterial color={c} roughness={0.9} />
+        </mesh>
+        <mesh castShadow receiveShadow position={[0, colH * 0.5 + 0.2, 0]}>
+          <cylinderGeometry args={[0.26, 0.3, colH, 10]} />
+          <meshStandardMaterial color={c} roughness={0.85} />
+        </mesh>
+        {/* Broken top slab */}
+        <mesh castShadow position={[0.14, colH + 0.25, 0]} rotation={[0.38, 0.2, 0.18]}>
+          <boxGeometry args={[0.48, 0.18, 0.42]} />
+          <meshStandardMaterial color={STONE_COLORS[(ci + 2) % STONE_COLORS.length]} roughness={1} />
+        </mesh>
+      </group>
+    )
+  } else {
+    // Rubble pile
+    const piles: [number, number, number, number, number, number, number][] = [
+      [0,    0.2,  0,    0.58, 0.38, 0.58, rot],
+      [-0.2, 0.13, 0.2,  0.34, 0.26, 0.34, rot + 0.9],
+      [0.22, 0.11, -0.18,0.3,  0.22, 0.3,  rot + 1.6],
+      [-0.1, 0.08, -0.24,0.26, 0.16, 0.26, rot - 0.7],
+    ]
+    return (
+      <group position={[x, 0, z]}>
+        {piles.map(([px, py, pz, bx, by, bz, br], i) => (
+          <mesh key={i} castShadow receiveShadow position={[px, py, pz]} rotation={[0, br, 0]}>
+            <boxGeometry args={[bx, by, bz]} />
+            <meshStandardMaterial color={STONE_COLORS[(ci + i) % STONE_COLORS.length]} roughness={0.95} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+}
 
 function World({ grid }: { grid: Grid }) {
-  const floorMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#1e293b' }),
-    []
-  )
-  const wallMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#374151' }),
-    []
-  )
-  const floorGeom = useMemo(() => new THREE.BoxGeometry(1, 0.15, 1), [])
-  const wallGeom = useMemo(() => new THREE.BoxGeometry(1, 1.5, 1), [])
+  const floorGeom = useMemo(() => new THREE.BoxGeometry(1, 0.14, 1), [])
 
   const { floors, walls } = useMemo(() => {
-    const floorTiles: Array<[number, number]> = []
-    const wallTiles: Array<[number, number]> = []
+    const floorTiles: Array<[number, number, string]> = []
+    const wallTiles:  Array<[number, number]> = []
+    const sandShades = ['#c49a6c', '#bf9465', '#c8a070', '#ba9060']
     for (let r = 0; r < grid.length; r++) {
       for (let c = 0; c < grid[r].length; c++) {
         const [x, z] = gridToWorld(r, c)
         if (grid[r][c] === 'W') {
           wallTiles.push([x, z])
         } else {
-          floorTiles.push([x, z])
+          const si = Math.floor(prand(x, z, 20) * sandShades.length)
+          floorTiles.push([x, z, sandShades[si]])
         }
       }
     }
@@ -269,30 +533,24 @@ function World({ grid }: { grid: Grid }) {
 
   return (
     <group>
-      {floors.map(([x, z], i) => (
+      {floors.map(([x, z, color], i) => (
         <mesh
           key={`f-${i}`}
           geometry={floorGeom}
-          material={floorMat}
-          position={[x, 0.075, z]}
+          position={[x, 0.07, z]}
           receiveShadow
-        />
+        >
+          <meshStandardMaterial color={color} roughness={0.92} />
+        </mesh>
       ))}
       {walls.map(([x, z], i) => (
-        <mesh
-          key={`w-${i}`}
-          geometry={wallGeom}
-          material={wallMat}
-          position={[x, 0.75, z]}
-          castShadow
-          receiveShadow
-        />
+        <Rock key={`w-${i}`} x={x} z={z} />
       ))}
     </group>
   )
 }
 
-// ─── Items renderer from grid ─────────────────────────────────────────────────
+// ─── Items renderer ────────────────────────────────────────────────────────────
 
 function Items({ grid }: { grid: Grid }) {
   const items = useMemo(() => {
@@ -303,23 +561,12 @@ function Items({ grid }: { grid: Grid }) {
         const [x, z] = gridToWorld(r, c)
         const key = `${r}-${c}`
         switch (cell) {
-          case 'C':
-            out.push(<Chest key={key} x={x} z={z} />)
-            break
-          case 'M':
-            out.push(<ManaCrystal key={key} x={x} z={z} />)
-            break
-          case 'H':
-            out.push(<LifeOrb key={key} x={x} z={z} />)
-            break
-          case 'T':
-            out.push(<Trap key={key} x={x} z={z} />)
-            break
-          case 'P':
-            out.push(<Portal key={key} x={x} z={z} />)
-            break
-          default:
-            break
+          case 'C': out.push(<Chest key={key} x={x} z={z} />); break
+          case 'M': out.push(<ManaCrystal key={key} x={x} z={z} />); break
+          case 'H': out.push(<LifeOrb key={key} x={x} z={z} />); break
+          case 'T': out.push(<Trap key={key} x={x} z={z} />); break
+          case 'P': out.push(<Portal key={key} x={x} z={z} />); break
+          default: break
         }
       }
     }
@@ -329,7 +576,7 @@ function Items({ grid }: { grid: Grid }) {
   return <>{items}</>
 }
 
-// ─── Camera rig that follows the hero ─────────────────────────────────────────
+// ─── Camera rig ───────────────────────────────────────────────────────────────
 
 function CameraRig({ heroRow, heroCol }: { heroRow: number; heroCol: number }) {
   const camRef = useRef<THREE.PerspectiveCamera>(null)
@@ -357,7 +604,7 @@ function CameraRig({ heroRow, heroCol }: { heroRow: number; heroCol: number }) {
   )
 }
 
-// ─── Main exported Canvas ─────────────────────────────────────────────────────
+// ─── Canvas export ────────────────────────────────────────────────────────────
 
 export interface GameCanvasProps {
   grid: Grid
@@ -367,39 +614,32 @@ export interface GameCanvasProps {
   enemies: EnemyState[]
 }
 
-export default function GameCanvas({
-  grid,
-  heroClass,
-  heroRow,
-  heroCol,
-  enemies,
-}: GameCanvasProps) {
+export default function GameCanvas({ grid, heroClass, heroRow, heroCol, enemies }: GameCanvasProps) {
   return (
-    <Canvas
-      shadows
-      gl={{ antialias: true }}
-      className="h-full w-full"
-      dpr={[1, 2]}
-    >
-      <color attach="background" args={['#0b1120']} />
-      <fog attach="fog" args={['#0b1120', 18, 40]} />
+    <Canvas shadows gl={{ antialias: true }} className="h-full w-full" dpr={[1, 2]}>
+      <color attach="background" args={['#1a0e06']} />
+      <fog attach="fog" args={['#1a0e06', 22, 55]} />
 
       <CameraRig heroRow={heroRow} heroCol={heroCol} />
 
-      <ambientLight intensity={0.5} />
+      {/* Desert night — cool moonlight + warm fill */}
+      <ambientLight intensity={0.75} color="#d4c4a8" />
       <directionalLight
         position={[10, 18, 8]}
-        intensity={1.5}
+        intensity={1.6}
+        color="#dce8ff"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-left={-25}
+        shadow-camera-right={25}
+        shadow-camera-top={25}
+        shadow-camera-bottom={-25}
         shadow-camera-near={0.5}
-        shadow-camera-far={60}
+        shadow-camera-far={70}
       />
+      {/* Warm amber fill — simulates distant torches/fire */}
+      <directionalLight position={[-8, 5, -5]} intensity={0.4} color="#ff9944" />
 
       <World grid={grid} />
       <Items grid={grid} />
