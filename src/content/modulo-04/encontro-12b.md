@@ -56,7 +56,84 @@ class Produto {
 
 ---
 
-## 2. `equals()` — comparação por valor
+## 2. Por que você precisa sobrescrever — os três cenários reais
+
+Antes de ver como implementar, vamos entender **quando** o problema aparece. São três situações que todo sistema real vai enfrentar.
+
+### Cenário 1 — `List.contains()` retorna mentira
+
+Imagine um carrinho de compras. Você quer saber se um produto já foi adicionado:
+
+```java
+List<Produto> carrinho = new ArrayList<>();
+carrinho.add(new Produto("Notebook", 2500.0));
+
+// Mais tarde, o usuário tenta adicionar o mesmo produto de novo:
+Produto novaBusca = new Produto("Notebook", 2500.0);
+System.out.println(carrinho.contains(novaBusca)); // → false ← ERRADO!
+
+// A pergunta "o Notebook já está no carrinho?" retorna false.
+// O produto está lá — mas o Java não reconhece como "igual".
+```
+
+`contains()` usa `equals()` internamente. Sem override, compara referências. `novaBusca` e o objeto dentro do carrinho são dois objetos diferentes na memória — logo, `contains()` diz que não estão lá. O carrinho vai adicionar o mesmo produto duas vezes.
+
+### Cenário 2 — `Set` não detecta duplicatas
+
+Um sistema de cadastro precisa garantir que não haja CPF duplicado:
+
+```java
+Set<Usuario> usuarios = new HashSet<>();
+usuarios.add(new Usuario("Ana", "111.111.111-11"));
+usuarios.add(new Usuario("Ana", "111.111.111-11")); // tentativa de duplicata
+
+System.out.println(usuarios.size()); // → 2 ← ERRADO! Esperávamos 1.
+
+// O Set aceita os dois como usuários distintos.
+// O sistema agora tem dois cadastros com o mesmo CPF — bug de integridade.
+```
+
+`HashSet` usa `hashCode()` para localizar o bucket e `equals()` para verificar duplicata. Sem ambos, a proteção contra duplicatas não funciona.
+
+### Cenário 3 — `Map` "perde" os dados
+
+Um cache que mapeia produto a preço promocional:
+
+```java
+Map<Produto, Double> cache = new HashMap<>();
+Produto p = new Produto("Notebook", 2500.0);
+cache.put(p, 1999.99); // guarda o preço promocional
+
+// Em outra parte do código, cria um objeto com os mesmos dados:
+Produto busca = new Produto("Notebook", 2500.0);
+System.out.println(cache.get(busca)); // → null ← ERRADO! O preço "sumiu".
+
+// O HashMap não encontra o preço porque busca e p têm hashCodes diferentes.
+// O dado está lá — mas nunca será encontrado.
+```
+
+Sem `hashCode()` consistente, `HashMap.get()` procura no bucket errado e não acha nada. O cache é inútil.
+
+---
+
+### O padrão que une os três cenários
+
+Toda vez que você usar um objeto como **chave** em `Map`, ou dentro de `Set`, ou em qualquer método que chame `equals()` (`contains()`, `remove()`, `indexOf()`...) — você precisa dos dois sobrescritos:
+
+| Operação | Usa `equals()`? | Usa `hashCode()`? |
+|----------|:---------------:|:-----------------:|
+| `list.contains(obj)` | ✅ | ❌ |
+| `set.contains(obj)` | ✅ | ✅ |
+| `set.add(obj)` (detectar duplicata) | ✅ | ✅ |
+| `map.put(obj, valor)` | ✅ | ✅ |
+| `map.get(obj)` | ✅ | ✅ |
+| `if (a.equals(b))` direto no código | ✅ | ❌ |
+
+A regra prática: **se o objeto vai entrar em `Set` ou `Map`, você precisa dos dois. Se só vai comparar com `if (a.equals(b))`, basta `equals()`.**
+
+---
+
+## 3. `equals()` — comparação por valor
 
 Por padrão, `equals()` herdado de `Object` compara **referências** — é equivalente ao operador `==`. Para que dois objetos com os mesmos dados sejam considerados iguais, você precisa sobrescrever `equals()`.
 
@@ -92,7 +169,7 @@ System.out.println(p1 == p2);      // false — == sempre compara referência
 
 ---
 
-## 3. `hashCode()` — o parceiro obrigatório de `equals()`
+## 4. `hashCode()` — o parceiro obrigatório de `equals()`
 
 `HashSet` e `HashMap` não começam pela comparação de igualdade. Eles começam pelo `hashCode()`. Pense assim: o `HashSet` é um armário com gavetas numeradas. Para encontrar a gaveta certa, ele chama `hashCode()`. Só depois de achar a gaveta ele chama `equals()` para confirmar.
 
@@ -125,7 +202,7 @@ System.out.println(catalogo.size()); // → 1 ✅
 
 ---
 
-## 4. O Contrato — a regra que não pode ser quebrada
+## 5. O Contrato — a regra que não pode ser quebrada
 
 > **Se `a.equals(b)` é `true`, então `a.hashCode() == b.hashCode()` deve ser `true`.**
 >
