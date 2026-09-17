@@ -423,7 +423,7 @@ export default function NexusHeroesPage() {
 
   // ─── Combat: magic ─────────────────────────────────────────────────────────
 
-  const useMagic = useCallback(() => {
+  const castMagic = useCallback(() => {
     if (phase !== 'playing') return
     setHero((h) => {
       if (!h) return h
@@ -478,6 +478,14 @@ export default function NexusHeroesPage() {
     })
   }, [phase, adjacentEnemies, applyXp, addLog])
 
+  // ─── Attack dispatcher (class-specific) ────────────────────────────────────
+
+  const handleAttack = useCallback(() => {
+    if (!hero) return
+    if (hero.class === 'guerreiro') attackWithSword()
+    else castMagic()
+  }, [hero, attackWithSword, castMagic])
+
   // ─── Keyboard controls ─────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -500,13 +508,17 @@ export default function NexusHeroesPage() {
           e.preventDefault()
           move(0, 1)
           break
+        case ' ':
+          e.preventDefault()
+          handleAttack()
+          break
         default:
           break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [phase, move])
+  }, [phase, move, handleAttack])
 
   // ─── Selection screen ──────────────────────────────────────────────────────
 
@@ -554,8 +566,47 @@ export default function NexusHeroesPage() {
           onChange={(e) => setNameInput(e.target.value)}
           placeholder="Nome do herói"
           maxLength={16}
-          className="mb-4 w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center outline-none focus:border-cyan-400"
+          className="mb-6 w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center outline-none focus:border-cyan-400"
         />
+
+        {/* Legend table */}
+        <div className="mb-6 w-full max-w-md overflow-hidden rounded-xl border border-slate-700 bg-slate-900/70">
+          <p className="border-b border-slate-700 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Legenda do mapa
+          </p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-1.5 text-left">Símbolo</th>
+                <th className="py-1.5 text-left">Elemento</th>
+                <th className="py-1.5 pr-4 text-left">Efeito</th>
+                <th className="py-1.5 pr-4 text-left">Conceito POO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {([
+                ['💎', 'Cristal de Mana', '+25 Mana', 'setMana() · invariante'],
+                ['🍀', 'Orbe de Vida',    '+20 HP',   'setVida() · invariante'],
+                ['👾', 'Inimigo',          'Combate',  '@Override calcularDano()'],
+                ['⚠️', 'Armadilha',        '−20 HP',   'TrapDamageException'],
+                ['📦', 'Baú',              '+XP +Coins','new Item("HeroCoin")'],
+                ['🌀', 'Portal',           '🏆 Vitória','Objetivo final'],
+              ] as [string, string, string, string][]).map(([icon, name, effect, concept]) => (
+                <tr key={name} className="border-t border-slate-800 text-slate-300">
+                  <td className="px-4 py-2 text-lg">{icon}</td>
+                  <td className="py-2 font-medium">{name}</td>
+                  <td className="py-2 pr-4 text-slate-400">{effect}</td>
+                  <td className="py-2 pr-4 font-mono text-[11px] text-slate-500">{concept}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="border-t border-slate-700 px-4 py-2 text-[11px] text-slate-500">
+            {selectedClass === 'guerreiro'
+              ? '⚔️ Guerreiro ataca com espada · pressione Espaço em combate'
+              : '🔮 Mago ataca com magia · pressione Espaço em combate'}
+          </p>
+        </div>
 
         <button
           type="button"
@@ -634,32 +685,42 @@ export default function NexusHeroesPage() {
           enemies={enemies}
         />
 
-        {/* Combat buttons overlay */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-wrap justify-center gap-3 px-4">
-          <button
-            type="button"
-            onClick={attackWithSword}
-            disabled={!hasAdjacentEnemy}
-            className={`pointer-events-auto rounded-xl px-5 py-3 font-bold shadow-lg transition ${
-              hasAdjacentEnemy
-                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
-                : 'cursor-not-allowed bg-amber-500/50 text-slate-950/60 opacity-50'
-            }`}
-          >
-            🗡️ Atacar com Espada
-          </button>
-          <button
-            type="button"
-            onClick={useMagic}
-            disabled={hero.mana < MAGIC_COST}
-            className={`pointer-events-auto rounded-xl px-5 py-3 font-bold shadow-lg transition ${
-              hero.mana >= MAGIC_COST
-                ? 'bg-indigo-500 text-white hover:bg-indigo-400'
-                : 'cursor-not-allowed bg-indigo-500/50 text-white/60 opacity-50'
-            }`}
-          >
-            ✨ Usar Magia ({MAGIC_COST} MP)
-          </button>
+        {/* Combat button overlay — single button, class-specific */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4">
+          {hero.class === 'guerreiro' ? (
+            <button
+              type="button"
+              onClick={attackWithSword}
+              disabled={!hasAdjacentEnemy}
+              className={`pointer-events-auto rounded-xl px-6 py-3 font-bold shadow-lg transition ${
+                hasAdjacentEnemy
+                  ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                  : 'cursor-not-allowed bg-amber-500/40 text-slate-950/50 opacity-50'
+              }`}
+            >
+              🗡️ Atacar com Espada
+              <span className="ml-2 rounded bg-slate-950/20 px-1.5 py-0.5 text-xs font-normal opacity-70">
+                Espaço
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={castMagic}
+              disabled={hero.mana < MAGIC_COST}
+              className={`pointer-events-auto rounded-xl px-6 py-3 font-bold shadow-lg transition ${
+                hero.mana >= MAGIC_COST
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-400'
+                  : 'cursor-not-allowed bg-indigo-500/40 text-white/50 opacity-50'
+              }`}
+            >
+              ✨ Usar Magia
+              <span className="ml-1 text-xs font-normal opacity-70">({MAGIC_COST} MP)</span>
+              <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-xs font-normal opacity-70">
+                Espaço
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -704,7 +765,7 @@ export default function NexusHeroesPage() {
             <DpadBtn onClick={() => move(0, 1)}>→</DpadBtn>
           </div>
           <p className="mt-2 text-center text-[11px] text-slate-500">
-            Use as setas do teclado ou o D-pad
+            Setas / D-pad para mover · Espaço para atacar
           </p>
         </div>
 
