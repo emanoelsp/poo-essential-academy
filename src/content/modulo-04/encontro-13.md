@@ -397,28 +397,93 @@ PAIR:FolhaDePagamento|Funcionario:composicao:FolhaDePagamento TEM MÚLTIPLOS Fun
 ### Exercício 1 — Fácil · 25 XP
 **Abstract ou Concreto?**
 
-Para cada classe abaixo, decida se deve ser `abstract` ou concreta. Justifique:
-- `Animal`, `Cachorro`, `Veiculo`, `Carro`, `FormaGeometrica`, `Retangulo`, `Pessoa`, `Estudante`, `Conta`, `ContaCorrente`, `Imposto`, `ICMS`
+Para cada classe abaixo, classifique diretamente na plataforma. A pergunta-guia: *"pode existir um objeto desse tipo sem ser um subtipo mais específico?"* — se não pode, é `abstract`.
+
+```fill-table
+COL1:Classe Java
+COL2:abstract ou concreto?
+LEGEND:Responda exatamente "abstract" ou "concreto" para cada classe. Feedback imediato ao clicar fora do campo.
+Animal | abstract
+Cachorro | concreto
+Veiculo | abstract
+Carro | concreto
+FormaGeometrica | abstract
+Retangulo | concreto
+Pessoa | abstract
+Estudante | concreto
+Conta | abstract
+ContaCorrente | concreto
+Imposto | abstract
+ICMS | concreto
+```
 
 ---
 
-### Exercício 2 — Fácil · 25 XP
-**Primeiro Método Abstrato**
+### Exercício 2 — Médio · 25 XP
+**Hierarquia de Bebidas — dois níveis de abstração**
 
-Implemente a hierarquia básica com classe abstrata:
+A hierarquia tem **dois níveis de classe abstrata** antes das classes concretas. `BebidaFria` e `BebidaQuente` são abstratas mas **não precisam redeclarar** `calcularCalorias()` — elas apenas herdam a obrigação de `Bebida`. A primeira classe concreta de cada ramo é quem implementa.
 
-```java
-abstract class Bebida {
-    protected String nome;
-    protected double volume; // em ml
-    abstract double calcularCalorias(); // kcal por ml × volume
-    void exibir() {
-        System.out.printf("[%s | %.0f ml | %.1f kcal]%n",
-            nome, volume, calcularCalorias());
+```mermaid
+classDiagram
+    class Bebida {
+        <<abstract>>
+        # nome : String
+        # volume : double
+        + calcularCalorias()* double
+        + exibir() void
     }
-}
-// Subclasses: Suco(kcal=0.4/ml), Refrigerante(kcal=0.42/ml), Agua(kcal=0)
+    class BebidaFria {
+        <<abstract>>
+        # tempGelada : int
+        + gelar(graus: int) void
+    }
+    class BebidaQuente {
+        <<abstract>>
+        # tempServido : double
+        + aquecer() void
+    }
+    class Suco { - tipo : String }
+    class Refrigerante { - marca : String }
+    class Agua
+    class Cafe { - intensidade : String }
+    class Cha { - erva : String }
+    Bebida <|-- BebidaFria
+    Bebida <|-- BebidaQuente
+    BebidaFria <|-- Suco
+    BebidaFria <|-- Refrigerante
+    BebidaFria <|-- Agua
+    BebidaQuente <|-- Cafe
+    BebidaQuente <|-- Cha
 ```
+
+Complete o diagrama de classes abaixo e implemente toda a hierarquia na IDE. As calorias por ml: `Suco = 0.4`, `Refrigerante = 0.42`, `Agua = 0`, `Cafe = 0.5`, `Cha = 0.1`.
+
+```fill-uml
+CLASS:Bebida
+ATTR:# nome : String
+ATTR:# volume : double
+METHOD:___:abstract double calcularCalorias()
+METHOD:exibir() void
+
+CLASS:BebidaFria
+ATTR:___:# tempGelada : int
+METHOD:gelar(int graus) void
+
+CLASS:Suco
+ATTR:- tipo : String
+METHOD:___:@Override double calcularCalorias()
+
+CLASS:BebidaQuente
+ATTR:___:# tempServido : double
+METHOD:aquecer() void
+
+CLASS:Cafe
+ATTR:- intensidade : String
+METHOD:___:@Override double calcularCalorias()
+```
+
+> **Ponto-chave:** `BebidaFria` e `BebidaQuente` são `abstract class` mas não re-implementam `calcularCalorias()`. O compilador aceita porque elas também são abstratas — a obrigação passa adiante. Só `Suco`, `Refrigerante`, `Agua`, `Cafe` e `Cha` (classes concretas) são forçadas a implementar.
 
 ---
 
@@ -433,29 +498,7 @@ Crie um `ArrayList<Funcionario>` com 5 funcionários de tipos variados. Calcule:
 
 ---
 
-### Exercício 4 — Médio · 25 XP
-**Template Method**
-
-Implemente o padrão Template Method para processamento de arquivos:
-
-```java
-abstract class ProcessadorArquivo {
-    // Template Method — ordem fixa de passos
-    public final void processar(String arquivo) {
-        abrirArquivo(arquivo);      // fixo
-        validarFormato();           // abstrato
-        processarConteudo();        // abstrato
-        gerarRelatorio();           // abstrato
-        fecharArquivo();            // fixo
-    }
-    // Implemente os métodos fixos e abstratos
-}
-// Subclasses: ProcessadorCSV, ProcessadorJSON, ProcessadorXML
-```
-
----
-
-### Exercício 5 — Difícil · 25 XP
+### Exercício 4 — Difícil · 25 XP
 **Sistema de Notificações**
 
 Crie a hierarquia:
@@ -488,7 +531,7 @@ Crie uma fila de 5 notificações de tipos variados, envie todas, e tente reenvi
 
 ---
 
-### Exercício 6 — Troubleshooting · 25 XP
+### Exercício 5 — Troubleshooting · 25 XP
 **Diagnóstico: Classes Abstratas com Erros**
 
 O código abaixo tem **3 erros** relacionados a classes abstratas. Um tenta instanciar uma classe abstrata, outro define método abstrato com corpo, e o terceiro esquece de implementar todos os métodos abstratos na subclasse. Identifique e corrija.
