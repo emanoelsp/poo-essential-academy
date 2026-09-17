@@ -66,7 +66,7 @@ export function EncounterCard({ encounter, locked = false }: EncounterCardProps)
         <div className="flex items-center gap-3 mt-0.5">
           <span className={cn('flex items-center gap-1 text-xs', config.color)}>
             <Icon size={11} />
-            {config.label}
+            {encounter.subtitle ?? config.label}
           </span>
           <span className="text-xs text-muted-foreground">⚡ {encounter.xp} XP</span>
           {encounter.exercises > 0 && (

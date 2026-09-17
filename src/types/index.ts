@@ -39,6 +39,7 @@ export interface Encounter {
   xp: number
   exercises: number
   challengeTasks?: ChallengeTask[]
+  subtitle?: string
 }
 
 export interface Module {
