@@ -551,8 +551,8 @@ export default function NexusHeroesPage() {
                   {cls === 'guerreiro' ? '⚔️ Guerreiro' : '🔮 Mago'}
                 </div>
                 <ul className="space-y-1 text-sm text-slate-300">
-                  <li>HP: {p.maxHp}</li>
-                  <li>Mana: {p.maxMana}</li>
+                  <li>HP: {p.maxHp} <span className="text-xs text-slate-500">(max)</span></li>
+                  <li>Mana: {p.maxMana} <span className="text-xs text-slate-500">(max)</span></li>
                   <li>ATK (espada): {p.atk}</li>
                   <li>MATK (magia): {p.matk}</li>
                 </ul>
