@@ -12,12 +12,59 @@ import { parseBugHunter } from './BugHunter'
 import { parseGithubSubmit } from './GithubSubmit'
 import { QuizModal } from '@/components/features/quiz/QuizModal'
 import { getQuizQuestions } from '@/content/data/quizQuestions'
-import { Lock, Gamepad2 } from 'lucide-react'
+import { Lock, Gamepad2, Swords } from 'lucide-react'
+import Link from 'next/link'
 
 interface ContentRendererProps {
   content: string
   showGabarito?: boolean
   encounterSlug?: string
+}
+
+function parseGameLaunch(source: string): React.ReactNode {
+  let url = '/'
+  let title = 'Iniciar o Jogo'
+  let description = ''
+  let button = '🎮 Jogar agora'
+  for (const line of source.split('\n')) {
+    const t = line.trim()
+    if (t.startsWith('URL:')) url = t.slice(4).trim()
+    if (t.startsWith('TITLE:')) title = t.slice(6).trim()
+    if (t.startsWith('DESCRIPTION:')) description = t.slice(12).trim()
+    if (t.startsWith('BUTTON:')) button = t.slice(7).trim()
+  }
+  const isExternal = url.startsWith('http')
+  return (
+    <div className="my-8 rounded-2xl overflow-hidden border border-violet-300/40 dark:border-violet-700/50 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 shadow-lg shadow-violet-500/20">
+      <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/20 shadow-inner">
+          <Swords size={26} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-0.5">Atividade Interativa</p>
+          <h3 className="text-xl sm:text-2xl font-black text-white leading-tight mb-1">{title}</h3>
+          {description && <p className="text-white/75 text-sm leading-relaxed">{description}</p>}
+        </div>
+        {isExternal ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-xl bg-white px-6 py-3 text-sm font-black text-violet-700 hover:bg-white/90 active:scale-95 transition-all shadow-md"
+          >
+            {button}
+          </a>
+        ) : (
+          <Link
+            href={url}
+            className="shrink-0 rounded-xl bg-white px-6 py-3 text-sm font-black text-violet-700 hover:bg-white/90 active:scale-95 transition-all shadow-md"
+          >
+            {button}
+          </Link>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function QuizLauncherInline({ slug }: { slug: string }) {
@@ -112,6 +159,10 @@ function parseMermaidAndCode(content: string, showGabarito: boolean, encounterSl
     if (block.startsWith('```github-submit')) {
       const src = block.replace(/^```github-submit\n?/, '').replace(/\n?```$/, '')
       return <React.Fragment key={i}>{parseGithubSubmit(src)}</React.Fragment>
+    }
+    if (block.startsWith('```game-launch')) {
+      const src = block.replace(/^```game-launch\n?/, '').replace(/\n?```$/, '')
+      return <React.Fragment key={i}>{parseGameLaunch(src)}</React.Fragment>
     }
     if (block.startsWith('```')) {
       const firstLine = block.split('\n')[0]
@@ -371,7 +422,7 @@ function MarkdownText({ text, showGabarito }: { text: string; showGabarito: bool
 }
 
 function inlineFormat(text: string): React.ReactNode {
-  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g)
   return (
     <>
       {parts.map((part, i) => {
@@ -387,6 +438,20 @@ function inlineFormat(text: string): React.ReactNode {
         }
         if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
           return <em key={i}>{part.slice(1, -1)}</em>
+        }
+        const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+        if (linkMatch) {
+          const isExternal = linkMatch[2].startsWith('http')
+          return (
+            <a
+              key={i}
+              href={linkMatch[2]}
+              className="text-primary underline underline-offset-2 hover:opacity-70 transition-opacity"
+              {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              {linkMatch[1]}
+            </a>
+          )
         }
         return <React.Fragment key={i}>{part}</React.Fragment>
       })}
