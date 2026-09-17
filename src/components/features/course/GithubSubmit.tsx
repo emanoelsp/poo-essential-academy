@@ -1,29 +1,51 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { usePersistedState, blockHash } from '@/hooks/usePersistedState'
-import { CheckCircle2, AlertTriangle, ExternalLink, Pencil } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { saveGithubSubmission } from '@/lib/firestore'
+import { CheckCircle2, AlertTriangle, ExternalLink, Pencil, Loader2 } from 'lucide-react'
 
 interface GithubSubmitProps {
   label: string
   placeholder: string
   blockKey: string
+  encounterSlug?: string
 }
 
-export function GithubSubmit({ label, placeholder, blockKey }: GithubSubmitProps) {
+export function GithubSubmit({ label, placeholder, blockKey, encounterSlug }: GithubSubmitProps) {
   const key = blockHash(blockKey)
   const [submitted, setSubmitted] = usePersistedState<string | null>(`github:${key}:url`, null)
-  const [draft, setDraft] = usePersistedState<string>(`github:${key}:draft`, '')
-  const [error, setError] = React.useState<string | null>(null)
+  const [draft, setDraft]         = usePersistedState<string>(`github:${key}:draft`, '')
+  const [error, setError]         = useState<string | null>(null)
+  const [saving, setSaving]       = useState(false)
 
-  const handleSubmit = () => {
+  const { user, profile } = useAuth()
+
+  const handleSubmit = async () => {
     const trimmed = draft.trim()
     if (!trimmed.startsWith('https://github.com/')) {
       setError('A URL deve começar com https://github.com/')
       return
     }
     setError(null)
-    setSubmitted(trimmed)
+    setSaving(true)
+    try {
+      if (user && profile && encounterSlug) {
+        await saveGithubSubmission(
+          user.uid,
+          profile.email,
+          profile.displayName,
+          encounterSlug,
+          trimmed
+        )
+      }
+      setSubmitted(trimmed)
+    } catch {
+      setError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleEdit = () => {
@@ -69,13 +91,16 @@ export function GithubSubmit({ label, placeholder, blockKey }: GithubSubmitProps
           onChange={(e) => { setDraft(e.target.value); setError(null) }}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           placeholder={placeholder}
-          className="flex-1 min-w-0 rounded-lg border border-violet-500/30 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+          disabled={saving}
+          className="flex-1 min-w-0 rounded-lg border border-violet-500/30 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 disabled:opacity-50"
         />
         <button
           onClick={handleSubmit}
-          className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition"
+          disabled={saving}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Enviar
+          {saving && <Loader2 size={13} className="animate-spin" />}
+          {saving ? 'Salvando…' : 'Enviar'}
         </button>
       </div>
       {error && (
@@ -88,7 +113,7 @@ export function GithubSubmit({ label, placeholder, blockKey }: GithubSubmitProps
   )
 }
 
-export function parseGithubSubmit(source: string): React.ReactNode {
+export function parseGithubSubmit(source: string, encounterSlug?: string): React.ReactNode {
   const lines = source.split('\n')
   let label = 'Envie seu repositório GitHub'
   let placeholder = 'https://github.com/usuario/repositorio'
@@ -100,5 +125,12 @@ export function parseGithubSubmit(source: string): React.ReactNode {
     if (placeholderMatch) placeholder = placeholderMatch[1].trim()
   }
 
-  return <GithubSubmit label={label} placeholder={placeholder} blockKey={source} />
+  return (
+    <GithubSubmit
+      label={label}
+      placeholder={placeholder}
+      blockKey={source}
+      encounterSlug={encounterSlug}
+    />
+  )
 }

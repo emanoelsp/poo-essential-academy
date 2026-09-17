@@ -339,3 +339,44 @@ export async function reviewSubmission(
     reviewNote: reviewNote ?? null,
   })
 }
+
+// ─── GitHub repo submissions ───────────────────────────────────────────────────
+
+export interface GithubSubmission {
+  id: string
+  uid: string
+  email: string
+  displayName: string
+  encounterSlug: string
+  repoUrl: string
+  submittedAt: unknown
+  updatedAt: unknown
+}
+
+export async function saveGithubSubmission(
+  uid: string,
+  email: string,
+  displayName: string,
+  encounterSlug: string,
+  repoUrl: string
+): Promise<void> {
+  const db  = getFirebaseDb()
+  const id  = `${uid}_${encounterSlug}`
+  const ref = doc(db, 'github_submissions', id)
+  const snap = await getDoc(ref)
+  if (snap.exists()) {
+    await updateDoc(ref, { repoUrl, displayName, email, updatedAt: serverTimestamp() })
+  } else {
+    await setDoc(ref, {
+      id, uid, email, displayName, encounterSlug, repoUrl,
+      submittedAt: serverTimestamp(),
+      updatedAt:   serverTimestamp(),
+    })
+  }
+}
+
+export async function getAllGithubSubmissions(): Promise<GithubSubmission[]> {
+  const db   = getFirebaseDb()
+  const snap = await getDocs(collection(db, 'github_submissions'))
+  return snap.docs.map((d) => d.data() as GithubSubmission)
+}

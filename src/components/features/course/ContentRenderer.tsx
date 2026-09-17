@@ -158,7 +158,7 @@ function parseMermaidAndCode(content: string, showGabarito: boolean, encounterSl
     }
     if (block.startsWith('```github-submit')) {
       const src = block.replace(/^```github-submit\n?/, '').replace(/\n?```$/, '')
-      return <React.Fragment key={i}>{parseGithubSubmit(src)}</React.Fragment>
+      return <React.Fragment key={i}>{parseGithubSubmit(src, encounterSlug)}</React.Fragment>
     }
     if (block.startsWith('```game-launch')) {
       const src = block.replace(/^```game-launch\n?/, '').replace(/\n?```$/, '')
