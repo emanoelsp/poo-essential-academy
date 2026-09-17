@@ -81,6 +81,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-12b', number: 0, title: 'A Classe Object — equals e hashCode',        module: 4, type: 'teoria',    xp: 50,  exercises: 3 },
       { slug: 'encontro-13', number: 13, title: 'Classes Abstratas',                           module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-14', number: 14, title: 'Trabalho Prático 2',                          module: 4, type: 'questionario', xp: 150, exercises: 1 },
+      { slug: 'atividade-nexus-heroes', number: 0, title: '🎮 Nexus Heroes — Atividade Prática de POO', module: 4, type: 'questionario', xp: 100, exercises: 0 },
       {
         slug: 'desafio-m04', number: 0, title: '⚔️ Desafio do Módulo 4 — JOptionPane + Herança', module: 4, type: 'desafio', xp: 180, exercises: 0,
         challengeTasks: [
