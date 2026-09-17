@@ -304,110 +304,6 @@ ContaPremiada.calcularRendimento() retorna (base + bonus) | 7.5
 
 ---
 
-## 5. A classe `Object` — `toString`, `equals` e `hashCode`
-
-Em Java, toda classe herda implicitamente de `java.lang.Object`. Dois dos métodos mais importantes que `Object` fornece — e que quase sempre devemos sobrescrever — são `equals` e `hashCode`.
-
-```mermaid
-classDiagram
-    class Object {
-        + toString() String
-        + equals(obj: Object) boolean
-        + hashCode() int
-        + getClass() Class
-    }
-    Object <|-- Funcionario
-    Funcionario <|-- Horista
-```
-
-### `toString()` — representação legível
-
-```java
-Produto p = new Produto("Notebook", 2500.0);
-System.out.println(p); // SEM @Override: "Produto@4e50df2e" — inútil
-
-// COM @Override:
-class Produto {
-    private String nome;
-    private double preco;
-
-    @Override
-    public String toString() {
-        return String.format("Produto[%s | R$ %.2f]", nome, preco);
-    }
-}
-// Agora: "Produto[Notebook | R$ 2.500,00]"
-```
-
-### `equals()` e `hashCode()` — o contrato que não pode ser quebrado
-
-Por padrão, `equals()` compara **referências** (`==`). Para comparar por **valor**, precisamos sobrescrever:
-
-```java
-class Produto {
-    private String nome;
-    private double preco;
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;           // mesma referência — trivialmente igual
-        if (!(obj instanceof Produto)) return false; // tipo errado — nunca igual
-        Produto outro = (Produto) obj;          // cast seguro — instanceof já garantiu
-        return this.nome.equals(outro.nome)
-            && Double.compare(this.preco, outro.preco) == 0;
-    }
-
-    @Override
-    public int hashCode() {
-        // Deve usar OS MESMOS campos que equals usa
-        int resultado = nome.hashCode();
-        resultado = 31 * resultado + Double.hashCode(preco);
-        return resultado;
-    }
-}
-```
-
-> **O contrato `equals`/`hashCode` — nunca viole:**
-> Se `a.equals(b)` é `true`, então `a.hashCode() == b.hashCode()` **deve** ser `true`.
-> O inverso não precisa valer — dois objetos podem ter o mesmo `hashCode` sem serem iguais.
->
-> Se você sobrescrever `equals` sem sobrescrever `hashCode`, `HashSet` e `HashMap` vão se comportar de forma imprevisível — dois objetos "iguais" coexistirão no mesmo conjunto como se fossem diferentes.
-
-```java
-Produto p1 = new Produto("Notebook", 2500.0);
-Produto p2 = new Produto("Notebook", 2500.0);
-
-// SEM override de equals:
-System.out.println(p1.equals(p2)); // false — referências diferentes
-System.out.println(p1 == p2);      // false — sempre false para objetos distintos
-
-// COM override (implementação acima):
-System.out.println(p1.equals(p2)); // true — mesmo nome e preço
-System.out.println(p1 == p2);      // false — == sempre compara referência
-
-// COM override de equals E hashCode:
-Set<Produto> catalogo = new HashSet<>();
-catalogo.add(p1);
-catalogo.add(p2); // sem hashCode: adiciona os dois — "duplicata" no set!
-System.out.println(catalogo.size()); // com hashCode correto: 1 ✅ | sem: 2 ❌
-```
-
----
-
-### Atividade — Diagnose o contrato quebrado
-
-```bug-hunt
-BUG:1:System.out.println(p1.equals(p2)); // → false:Produto sem nenhum override de equals. p1 e p2 têm mesmo nome e preço, mas foram criados com new separadamente.
-Q:Por que equals() retorna false mesmo nome e preço sendo idênticos?:O equals() padrão herdado de Object compara referências (==) — p1 e p2 são objetos distintos na memória|equals() só funciona com tipos primitivos, não com objetos de classes customizadas|String.equals() propagaria automaticamente se os campos fossem public|@Override ativa comparação por valor automaticamente em qualquer método:0
-Q:Qual método deve ser sobrescrito para que a comparação seja por valor?:equals(Object obj) — implementando comparação campo a campo com instanceof|compareTo(Produto outro) — usado para ordenar objetos|toString() — usado para representação textual do objeto|clone() — usado para criar cópias independentes do objeto:0
-
-BUG:2:System.out.println(set.size()); // → 2 (esperado: 1):Produto com equals(Object) corretamente sobrescrito, mas hashCode() ainda usa o padrão de Object — dois objetos iguais por equals() produzem hashCodes distintos.
-Q:Por que o HashSet aceita p1 e p2 como elementos distintos mesmo com equals retornando true?:HashSet usa hashCode() para localizar o bucket antes de chamar equals — hashCodes diferentes fazem o set nem chegar a comparar os objetos|equals() funciona diferente dentro de coleções do que quando chamado diretamente|HashSet permite duplicatas quando os objetos são da mesma classe|O equals ainda compara referências internamente quando usado dentro do HashSet:0
-Q:Qual regra do contrato equals/hashCode foi violada?:Se a.equals(b) é true, então a.hashCode() deve ser igual a b.hashCode()|Se a.hashCode() == b.hashCode(), então a.equals(b) deve ser true|Sempre que equals é sobrescrito, toString() também deve ser sobrescrito|hashCode() deve retornar sempre zero quando equals não foi sobrescrito:0
-```
-
----
-
 ## Exercícios Práticos
 
 ---
@@ -469,29 +365,7 @@ Crie 3 objetos e mostre os diferentes valores calculados para a mesma base de R$
 
 ---
 
-### Exercício 4 — Médio · 25 XP
-**equals e hashCode — contrato completo**
-
-Implemente a classe `Livro` (isbn, titulo, autor) com `@Override equals` que considera dois livros iguais se tiverem o mesmo ISBN, **e** `@Override hashCode` usando o mesmo campo. Demonstre:
-
-```java
-Livro l1 = new Livro("978-0", "Clean Code", "Martin");
-Livro l2 = new Livro("978-0", "Clean Code", "Martin");
-Livro l3 = new Livro("978-1", "Outro Livro", "Autor");
-
-System.out.println(l1.equals(l2)); // true  — mesmo ISBN
-System.out.println(l1.equals(l3)); // false — ISBN diferente
-System.out.println(l1 == l2);      // false — referências distintas
-
-Set<Livro> acervo = new HashSet<>();
-acervo.add(l1);
-acervo.add(l2); // l2 é "igual" a l1 — não deve duplicar
-System.out.println(acervo.size()); // deve imprimir 1
-```
-
----
-
-### Exercício 5 — Difícil · 25 XP
+### Exercício 4 — Difícil · 25 XP
 **Hierarquia de Dispositivos**
 
 Modele e implemente:
@@ -532,7 +406,7 @@ Cada `status()` deve usar `super.status()` e acrescentar informações específi
 
 ---
 
-### Exercício 6 — Troubleshooting · 25 XP
+### Exercício 5 — Troubleshooting · 25 XP
 **Diagnóstico: `super()`, `@Override` e Shadowing**
 
 O código abaixo tem **3 erros** relacionados a herança e sobrescrita. Um não chama `super()` primeiro, um usa `@Override` em método com assinatura errada (sobrecarga, não sobrescrita), e um campo da subclasse esconde o da superclasse criando comportamento inesperado. Identifique e corrija.

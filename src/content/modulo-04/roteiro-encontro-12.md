@@ -298,159 +298,17 @@ Dê 2–3 minutos. Depois revele:
 
 ---
 
-## Etapa 3 — A Classe `Object`: `equals` e `hashCode`
-
-> ⏱ ~15 min
-
-> 💬 **Fala do professor:**
->
-> "Em Java, toda classe herda implicitamente de `java.lang.Object`. Isso significa que toda classe que você cria já tem `toString()`, `equals()` e `hashCode()` — você só não escreveu, mas eles estão lá.
->
-> O `toString()` padrão vocês já viram no E11 — devolve aquele endereço de memória inútil como `Produto@4e50df2e`. Por isso sempre sobrescrevemos. Hoje o foco são `equals()` e `hashCode()` — dois métodos que andam juntos e que, se você quebrar o contrato entre eles, causa bugs silenciosos em `HashSet`, `HashMap` e qualquer coleção que use hash."
-
-### A demonstração progressiva dos três passos
-
-**Passo 1 — sem nenhum override**
-
-Na IDE:
-
-```java
-Produto p1 = new Produto("Notebook", 2500.0);
-Produto p2 = new Produto("Notebook", 2500.0);
-
-System.out.println(p1.equals(p2)); // false
-System.out.println(p1 == p2);      // false
-```
-
-Execute e mostre o resultado.
-
-> 💬 **Fala do professor:**
->
-> "Por que `false`? Porque `equals()` padrão de `Object` compara referências — é equivalente ao `==`. `p1` e `p2` são dois objetos diferentes no heap. Mesmo que os dados sejam idênticos, as referências apontam para endereços diferentes.
->
-> O que nós queremos é comparação por valor — dois `Produto` com mesmo nome e preço devem ser considerados iguais. Para isso, precisamos sobrescrever `equals()`."
-
-**Passo 2 — `equals()` sobrescrito, sem `hashCode()`**
-
-Mostre a implementação correta de `equals()`:
-
-```java
-@Override
-public boolean equals(Object obj) {
-    if (this == obj) return true;                 // mesma referência — trivialmente igual
-    if (!(obj instanceof Produto)) return false;  // tipo errado — nunca igual
-    Produto outro = (Produto) obj;                // cast seguro — instanceof já verificou
-    return this.nome.equals(outro.nome)
-        && Double.compare(this.preco, outro.preco) == 0;
-}
-```
-
-> 💬 **Fala do professor:**
->
-> "Por que `Double.compare` e não `==` para o preço? Porque `double` é ponto flutuante — `0.1 + 0.2` em Java não é `0.3` exato. `Double.compare` trata essas imprecisões. Para `String`, `nome.equals()` já é comparação por valor.
->
-> Por que o `instanceof` antes do cast? Para evitar `ClassCastException`. Se `obj` for um `String`, o `instanceof` retorna `false` imediatamente — seguro."
-
-Execute e mostre:
-
-```java
-System.out.println(p1.equals(p2)); // true — resolvido!
-```
-
-Pausa dramática.
-
-> 💬 **Fala do professor:**
->
-> "Ótimo, `equals()` funcionando. Agora vamos colocar num `HashSet`."
-
-```java
-Set<Produto> catalogo = new HashSet<>();
-catalogo.add(p1);
-catalogo.add(p2); // p2 é "igual" a p1 — esperamos que não entre
-
-System.out.println(catalogo.size()); // esperamos 1
-```
-
-Execute. Mostre que o resultado é **2**.
-
-> 💬 **Fala do professor:**
->
-> "Tamanho 2. O Set aceitou os dois como se fossem objetos diferentes — mesmo com nosso `equals()` correto. Por que?
->
-> Porque `HashSet` não começa pela comparação de igualdade. Ele começa pelo `hashCode()`. Pensa assim: o `HashSet` é um armário com gavetas. Quando você adiciona um objeto, ele calcula o `hashCode()` para saber em qual gaveta guardar. Quando verifica duplicata, vai à gaveta, pega o que está lá, e só então chama `equals()`.
->
-> `p1` e `p2` — sem override de `hashCode()` — têm `hashCode()` padrão de `Object`, que é baseado no endereço de memória. São endereços diferentes, então `hashCodes` diferentes, então gavetas diferentes. O Set nem chega a chamar `equals()` para comparar os dois."
-
-**Passo 3 — `equals()` + `hashCode()` corretos**
-
-```java
-@Override
-public int hashCode() {
-    int resultado = nome.hashCode();
-    resultado = 31 * resultado + Double.hashCode(preco);
-    return resultado;
-}
-```
-
-> 💬 **Fala do professor:**
->
-> "A regra é: `hashCode()` deve usar os mesmos campos que `equals()` usa. Se `equals()` compara `nome` e `preco`, `hashCode()` deve incluir `nome` e `preco` no cálculo.
->
-> O `31 *` é uma convenção clássica para misturar múltiplos campos — distribui bem os valores e é eficiente para a JVM. Não precisa inventar — esse padrão funciona."
-
-Execute e mostre `catalogo.size()` = **1**.
-
-> 💬 **Fala do professor:**
->
-> "Agora sim. `p1` e `p2` produzem o mesmo `hashCode()` porque têm os mesmos campos — caem na mesma gaveta. O Set vai à gaveta, encontra `p1`, chama `equals()`, recebe `true` e não adiciona `p2`.
->
-> O contrato que conecta os dois é: **se `a.equals(b)` é `true`, então `a.hashCode()` deve ser igual a `b.hashCode()`**. O contrário não precisa valer — dois objetos podem ter o mesmo `hashCode()` sem serem iguais. Mas se são iguais por `equals()`, **obrigatoriamente** têm o mesmo `hashCode()`. Violou isso? Resultado imprevisível em qualquer coleção que use hash."
-
-### Atividade interativa na plataforma — bug-hunt
-
-Abra a atividade **"Diagnose o contrato quebrado"** na plataforma.
-
-> 💬 **Fala do professor:**
->
-> "Dois bugs, duas perguntas cada. O bug 1 replica o Passo 1 — sem `equals()`. O bug 2 replica o Passo 2 — `equals()` certo, `hashCode()` faltando. As perguntas pedem que vocês expliquem o porquê, não só identifiquem o problema. Cinco minutos."
-
-Circule pela sala e observe. Os erros mais comuns nessa atividade:
-- Aluno escolhe que `equals()` "funciona diferente dentro de coleções" — corrija: `equals()` é idêntico, o problema é que nunca chega a ser chamado
-- Aluno confunde a segunda regra do contrato com a primeira — a segunda diz que mesmo `hashCode` não garante igualdade; só a primeira é violada aqui
-
-**Revisão em voz alta:**
-
-**Bug 1 — Gabarito:**
-
-> 💬 **Fala do professor:**
->
-> "Por que `equals()` retorna `false` sem override? O `equals()` herdado de `Object` é `==` — compara referências. `p1` e `p2` são objetos distintos na memória, então `false`.
->
-> Qual método sobrescrever? `equals(Object obj)` — com `instanceof`, cast seguro, e comparação campo a campo."
-
-**Bug 2 — Gabarito:**
-
-> 💬 **Fala do professor:**
->
-> "Por que o `HashSet` aceita os dois mesmo com `equals()` correto? Porque o `HashSet` usa `hashCode()` primeiro para localizar o bucket. Com `hashCode()` padrão de `Object`, `p1` e `p2` têm hashes diferentes — vão para buckets diferentes. O Set nunca chama `equals()` para compará-los.
->
-> Qual regra foi violada? A primeira do contrato: `a.equals(b) == true` implica `a.hashCode() == b.hashCode()`. Os objetos são iguais por `equals()` mas têm `hashCodes` diferentes — contrato quebrado."
-
----
-
 ## Fechamento — 5 min
 
 > 💬 **Fala do professor:**
 >
-> "Resumindo os três pontos do dia:
+> "Resumindo os dois pontos do dia:
 >
 > **Cadeia de construtores:** quando você cria um objeto, os construtores rodam de cima para baixo — `Object` primeiro, subclasse mais específica por último. `super()` obrigatoriamente primeiro porque os atributos herdados precisam existir antes de qualquer código da subclasse.
 >
 > **`super.método()`:** quando sobrescreve, você pode substituir o comportamento inteiro ou acrescentar em cima do que a superclasse faz. Usar `super.método()` evita duplicação e garante que mudanças na superclasse propagam automaticamente.
 >
-> **`equals` e `hashCode`:** o contrato é simples mas inegociável — se `equals()` diz que dois objetos são iguais, `hashCode()` deve retornar o mesmo valor para os dois. Sobrescreva sempre os dois juntos, usando os mesmos campos.
->
-> Agora os exercícios. O 1 é prever saída — façam na mão antes de compilar. O 2 é a cadeia de toString() com super — três níveis. O 3 é cálculo composto com super usando impostos — aplica o mesmo padrão da ContaPremiada. O 4 é o equals/hashCode completo — o mais importante desta lista. O 5 é uma hierarquia maior com três níveis de status(). O 6 é troubleshooting com os três erros clássicos deste encontro."
+> Agora os exercícios. O 1 é prever saída — façam na mão antes de compilar. O 2 é a cadeia de toString() com super — três níveis. O 3 é cálculo composto com super usando impostos — aplica o mesmo padrão da ContaPremiada. O 4 é uma hierarquia maior com três níveis de status(). O 5 é troubleshooting com os três erros clássicos deste encontro."
 
 ---
 
@@ -462,30 +320,24 @@ Circule pela sala e observe. Os erros mais comuns nessa atividade:
 
 2. **Chamar `super()` em qualquer lugar que não a primeira linha** — o compilador já bloqueia com `call to super must be first statement in constructor`. Mostre o erro ao vivo se alguém tentar. Não pule: ver o erro de compilação é o que grava a regra.
 
-3. **Sobrescrever `equals()` sem sobrescrever `hashCode()`** — esse é o bug silencioso mais perigoso do encontro. Se alguém fizer só o Exercício 4 com `equals()` e não demonstrar o `HashSet`, a aula não está completa. Reserve pelo menos 2 minutos para mostrar o `set.size()` = 2 antes de adicionar `hashCode()`.
+3. **`@Override` em método `static`** — se alguém tentar, vai aparecer o erro `method does not override or implement a method from a supertype` (no IntelliJ) ou `static method cannot override instance method`. Aproveite o erro para explicar method hiding.
 
-4. **`@Override` em método `static`** — se alguém tentar, vai aparecer o erro `method does not override or implement a method from a supertype` (no IntelliJ) ou `static method cannot override instance method`. Aproveite o erro para explicar method hiding.
-
-5. **Shadowing de atributos** — declarar um campo com o mesmo nome na subclasse que na superclasse cria dois campos distintos. O Exercício 6 tem exatamente esse bug. Se ninguém perceber, projete os dois campos no debugger para mostrar que existem dois `marca` no mesmo objeto.
+4. **Shadowing de atributos** — declarar um campo com o mesmo nome na subclasse que na superclasse cria dois campos distintos. O Exercício 5 tem exatamente esse bug. Se ninguém perceber, projete os dois campos no debugger para mostrar que existem dois `marca` no mesmo objeto.
 
 **Conexão com o próximo encontro:**
 
-No E13, `Funcionario` vai virar uma classe abstrata com `calcularSalario()` abstrato. A cadeia de construtores que vimos hoje não muda — classes abstratas têm construtores que continuam sendo chamados via `super()`. Mas o `@Override` vai virar obrigatório semanticamente, não só recomendado.
+No E12b, vamos ver `equals()` e `hashCode()` — o contrato que conecta os dois e por que quebrá-lo causa bugs silenciosos em `HashSet` e `HashMap`. No E13, `Funcionario` vai virar uma classe abstrata com `calcularSalario()` abstrato.
 
 **Perguntas avançadas que podem surgir:**
 
-- *"Posso sobrescrever `hashCode()` sem sobrescrever `equals()`?"* — Tecnicamente sim, mas não faz sentido. O contrato vai na outra direção: se `equals` é true, `hashCode` deve ser igual. Se você sobrescreve só `hashCode()`, `equals()` continua sendo `==` e o contrato é trivialmente satisfeito — mas inútil. Nunca faça isso.
+- *"Por que `@Override` não pega o erro de shadowing?"* — `@Override` só valida que a assinatura do método é idêntica à da superclasse. Shadowing é um problema de campo (atributo), não de método — o compilador não reclama, mas o comportamento pode surpreender.
 
-- *"Por que o multiplicador `31` no `hashCode()`?"* — É um número primo que distribui bem os bits e compila para uma operação eficiente na JVM (`31 * x = (x << 5) - x`). É convenção do Java, não uma lei. IDEs como IntelliJ geram automaticamente com `31`.
-
-- *"Se dois objetos têm o mesmo `hashCode()` mas não são iguais por `equals()`, o que acontece no `HashSet`?"* — É uma colisão de hash. Eles ficam no mesmo bucket, mas o `HashSet` continua chamando `equals()` para verificar — e como retorna `false`, os dois são armazenados no mesmo bucket como elementos distintos. Performance piora, mas correção é mantida.
-
-- *"`String` sobrescreve `equals()` e `hashCode()`?"* — Sim, e é por isso que `"abc".equals("abc")` é `true` mesmo sendo objetos diferentes. `String` é um bom exemplo de `equals()` por valor correto para mostrar à turma.
+- *"E se eu não chamar `super()` em hipótese alguma no construtor?"* — Se a superclasse tem um construtor padrão (sem parâmetros), Java insere `super()` implícito. Se não tem, o compilador exige que você chame explicitamente `super(args)` — não compila sem isso.
 
 **Se sobrar tempo:**
 
-- Mostre no depurador que dois objetos "iguais" têm o mesmo `hashCode()` após o override — visualizar o int no debugger é mais concreto do que confiar na saída do `println`
-- Pergunte à turma: "Se `Produto` fosse imutável — sem setters — o `hashCode()` poderia ser calculado uma vez no construtor e armazenado em um campo?" — Resposta: sim, é a otimização que `String` usa internamente
+- Mostre no depurador o campo `Veiculo.marca` versus `Carro.marca` em um objeto que sofreu shadowing — os dois campos coexistem no mesmo objeto com valores diferentes
+- Pergunte: "O que acontece se chamarmos `super.toString()` dentro de `Carro.toString()` quando há shadowing?" — `Veiculo.toString()` enxerga `Veiculo.marca`, não `Carro.marca`. A saída mostra o campo da superclasse, não o da subclasse.
 
 ---
 
@@ -546,22 +398,6 @@ Cada classe inicializa apenas os campos que ela própria declara. `Veiculo` não
 > 💡 **Erro mais comum:** aluno coloca `2.5` na linha 2 porque "já está dentro de ContaPremiada". Isso indica confusão entre "o que super retorna" e "o que this calcula". Corrija: `super.calcularRendimento()` chama a implementação de `Conta`, não a de `ContaPremiada`. A variável `this` não influencia qual implementação é chamada quando você usa `super`.
 
 ---
-
-### Atividade 4 — Diagnose o contrato quebrado
-
-**Bug 1 — `p1.equals(p2)` retorna `false`:**
-
-| Pergunta | Resposta correta | Por quê as outras estão erradas |
-|----------|:----------------:|----------------------------------|
-| Por que `equals()` retorna `false`? | **A** — `equals()` padrão compara referências | B: `equals()` funciona com qualquer objeto, não só primitivos. C: modificadores não afetam `equals()`. D: `@Override` não "ativa" nada — é só validação de compilação |
-| Qual método sobrescrever? | **A** — `equals(Object obj)` | B: `compareTo` é para ordenação (Comparable), não igualdade. C: `toString()` é para representação textual. D: `==` nunca é a solução para comparação por valor |
-
-**Bug 2 — `set.size()` retorna `2`:**
-
-| Pergunta | Resposta correta | Por quê as outras estão erradas |
-|----------|:----------------:|----------------------------------|
-| Por que `HashSet` aceita os dois? | **A** — `hashCode()` diferente → buckets diferentes → `equals()` nunca é chamado | B: `equals()` funciona identicamente dentro e fora de coleções. C: `HashSet` é Set — não admite duplicatas por design. D: `equals()` está correto — o problema é `hashCode()` |
-| Qual regra foi violada? | **A** — `equals()==true` implica `hashCode` igual | B: essa é a direção inversa (que não precisa ser verdadeira). C: `toString()` não tem relação com o contrato. D: `hashCode()` retornar zero seria ruim para performance mas não quebraria a corretude |
 
 ---
 
@@ -742,66 +578,7 @@ public static void main(String[] args) {
 
 ---
 
-### Exercício 4 — `equals` e `hashCode` — contrato completo
-
-> 💬 **Condução sugerida:**
->
-> Esse é o exercício mais importante do encontro. Reserve tempo para que todos cheguem ao `set.size() == 1` na IDE. Quem não sobrescrever `hashCode()` vai ver `2` — use esse momento como revisão ao vivo.
-
-```java
-public class Livro {
-    private String isbn;
-    private String titulo;
-    private String autor;
-
-    public Livro(String isbn, String titulo, String autor) {
-        this.isbn   = isbn;
-        this.titulo = titulo;
-        this.autor  = autor;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof Livro)) return false;
-        Livro outro = (Livro) obj;
-        return this.isbn.equals(outro.isbn); // igualdade definida só pelo ISBN
-    }
-
-    @Override
-    public int hashCode() {
-        return isbn.hashCode(); // usa o mesmo campo que equals
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Livro[%s | %s | %s]", isbn, titulo, autor);
-    }
-}
-```
-
-**Saídas esperadas:**
-
-```java
-Livro l1 = new Livro("978-0", "Clean Code", "Martin");
-Livro l2 = new Livro("978-0", "Clean Code", "Martin");
-Livro l3 = new Livro("978-1", "Outro Livro", "Autor");
-
-System.out.println(l1.equals(l2)); // true  — mesmo ISBN
-System.out.println(l1.equals(l3)); // false — ISBNs diferentes
-System.out.println(l1 == l2);      // false — referências distintas (sempre false para new)
-
-Set<Livro> acervo = new HashSet<>();
-acervo.add(l1);
-acervo.add(l2);
-System.out.println(acervo.size()); // 1 — l2 é duplicata de l1 pelo ISBN
-```
-
-> 💡 **Decisão de design para discutir:** por que usar só `isbn` em `equals()` e não `titulo + autor`? Porque ISBN é o identificador único de uma edição — dois livros com o mesmo ISBN são, por definição, o mesmo livro, mesmo que alguém tenha digitado o título diferente. Escolher os campos certos para `equals()` é uma decisão de domínio, não técnica.
-
----
-
-### Exercício 5 — Hierarquia de Dispositivos
+### Exercício 4 — Hierarquia de Dispositivos
 
 > 💬 **Condução sugerida:**
 >
@@ -904,7 +681,7 @@ public class ServidorRack extends Computador {
 
 ---
 
-### Exercício 6 — Diagnóstico: `super()`, `@Override` e Shadowing
+### Exercício 5 — Diagnóstico: `super()`, `@Override` e Shadowing
 
 > 💬 **Condução sugerida:**
 >

@@ -78,6 +78,7 @@ export const CURRICULUM: Module[] = [
     encounters: [
       { slug: 'encontro-11', number: 11, title: 'Generalização e Especialização — Herança I', module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-12', number: 12, title: 'Mecânica de Herança — Herança II',           module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
+      { slug: 'encontro-12b', number: 0, title: 'A Classe Object — equals e hashCode',        module: 4, type: 'teoria',    xp: 50,  exercises: 3 },
       { slug: 'encontro-13', number: 13, title: 'Classes Abstratas',                           module: 4, type: 'teoria',    xp: 50,  exercises: 5 },
       { slug: 'encontro-14', number: 14, title: 'Trabalho Prático 2',                          module: 4, type: 'questionario', xp: 150, exercises: 1 },
       {
