@@ -1,119 +1,783 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react'
+import dynamic from 'next/dynamic'
+import type {
+  CellType,
+  HeroClass,
+  HeroState,
+  EnemyState,
+  LogEntry,
+  LogType,
+  GamePhase,
+  Grid,
+} from './types'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const GameCanvas = dynamic(() => import('./GameCanvas'), { ssr: false })
 
-type CellType = '_' | 'W' | 'C' | 'M' | 'H' | 'T' | 'E' | 'P' | 'S'
-type HeroClass = 'guerreiro' | 'mago'
-type LogType = 'instanciacao' | 'invariante' | 'excecao' | 'override' | 'info'
-type GamePhase = 'select' | 'name' | 'playing' | 'victory' | 'defeat'
+// ─── Base maze (15x15) ─────────────────────────────────────────────────────────
 
-interface HeroState {
-  name: string
-  class: HeroClass
+const BASE_MAZE: string[] = [
+  'WWWWWWWWWWWWWWW',
+  'W___W___W__M_PW',
+  'W_W_W_W_W_WWW_W',
+  'W_W___W___W___W',
+  'W_WWW_WWWWW_WWW',
+  'W___W_____W_W_W',
+  'WWW_WWWW_WW_W_W',
+  'W_____W_____W_W',
+  'W_WWWWWWW_WWW_W',
+  'W_W_____W_W___W',
+  'W_W_WWW_W_W_WWW',
+  'W___W_____W_W_W',
+  'WWW_W_WWWWW_W_W',
+  'WC___W_E_____TW',
+  'WWWWWWWWWWWWWWW',
+]
+
+// Extra scattered elements (row, col, type). Only placed on '_' cells.
+const EXTRAS: Array<{ row: number; col: number; type: CellType }> = [
+  { row: 3, col: 3, type: 'M' },
+  { row: 9, col: 12, type: 'M' },
+  { row: 11, col: 5, type: 'M' },
+  { row: 5, col: 1, type: 'H' },
+  { row: 7, col: 10, type: 'H' },
+  { row: 1, col: 5, type: 'T' },
+  { row: 9, col: 3, type: 'T' },
+  { row: 3, col: 11, type: 'E' },
+  { row: 11, col: 9, type: 'E' },
+]
+
+const HERO_START = { row: 13, col: 1 }
+
+// ─── Stat presets ──────────────────────────────────────────────────────────────
+
+interface HeroPreset {
   hp: number
   maxHp: number
   mana: number
   maxMana: number
   atk: number
-  level: number
-  xp: number
-  row: number
-  col: number
+  matk: number
 }
 
-interface LogEntry {
-  id: number
-  type: LogType
-  message: string
+const PRESETS: Record<HeroClass, HeroPreset> = {
+  guerreiro: { hp: 120, maxHp: 120, mana: 40, maxMana: 40, atk: 25, matk: 10 },
+  mago: { hp: 80, maxHp: 80, mana: 120, maxMana: 120, atk: 15, matk: 40 },
 }
 
-interface Cell {
-  type: CellType
-  collected: boolean
+const ENEMY_HP = 30
+const ENEMY_ATK = 12
+const MAGIC_COST = 20
+
+// ─── Grid builder ────────────────────────────────────────────────────────────
+
+function buildGrid(): { grid: Grid; enemies: EnemyState[] } {
+  const grid: Grid = BASE_MAZE.map((row) => row.split('') as CellType[])
+  for (const ex of EXTRAS) {
+    if (grid[ex.row] && grid[ex.row][ex.col] === '_') {
+      grid[ex.row][ex.col] = ex.type
+    }
+  }
+  // The hero spawns on the start cell; make sure nothing (e.g. a chest)
+  // sits underneath it so the spawn tile is plain floor.
+  grid[HERO_START.row][HERO_START.col] = '_'
+  const enemies: EnemyState[] = []
+  let id = 0
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (grid[r][c] === 'E') {
+        enemies.push({
+          id: id++,
+          row: r,
+          col: c,
+          hp: ENEMY_HP,
+          atk: ENEMY_ATK,
+          alive: true,
+        })
+        grid[r][c] = '_'
+      }
+    }
+  }
+  return { grid, enemies }
 }
 
-// ─── Map definition ─────────────────────────────────────────────────────────
+// ─── Level thresholds ────────────────────────────────────────────────────────
 
-const BASE_MAP: CellType[][] = [
-  ['_', '_', '_', 'W', '_', '_', '_', 'P'],
-  ['E', 'W', '_', 'W', '_', 'W', 'M', '_'],
-  ['_', 'W', 'C', '_', '_', 'W', '_', 'H'],
-  ['_', '_', '_', '_', 'W', '_', '_', '_'],
-  ['W', '_', 'T', 'W', 'W', '_', 'W', '_'],
-  ['_', 'M', '_', '_', '_', 'E', '_', '_'],
-  ['_', '_', '_', '_', 'H', '_', '_', 'C'],
-  ['S', '_', '_', 'W', '_', 'M', '_', '_'],
-]
+function levelForXp(xp: number): number {
+  if (xp >= 100) return 3
+  if (xp >= 50) return 2
+  return 1
+}
 
-function buildInitialGrid(): Cell[][] {
-  return BASE_MAP.map(row =>
-    row.map(type => ({ type, collected: false }))
+// ─── Log badge styles ──────────────────────────────────────────────────────────
+
+const LOG_META: Record<LogType, { label: string; badge: string; text: string }> = {
+  instanciacao: {
+    label: 'INSTANCIAÇÃO',
+    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    text: 'text-cyan-100',
+  },
+  invariante: {
+    label: 'INVARIANTE',
+    badge: 'bg-green-500/20 text-green-300 border-green-500/40',
+    text: 'text-green-100',
+  },
+  excecao: {
+    label: 'EXCEÇÃO',
+    badge: 'bg-red-500/20 text-red-300 border-red-500/40',
+    text: 'text-red-100',
+  },
+  override: {
+    label: 'OVERRIDE',
+    badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    text: 'text-purple-100',
+  },
+  info: {
+    label: 'INFO',
+    badge: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40',
+    text: 'text-zinc-100',
+  },
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+export default function NexusHeroesPage() {
+  const [phase, setPhase] = useState<GamePhase>('select')
+  const [selectedClass, setSelectedClass] = useState<HeroClass>('guerreiro')
+  const [nameInput, setNameInput] = useState('')
+
+  const initial = useMemo(() => buildGrid(), [])
+  const [grid, setGrid] = useState<Grid>(initial.grid)
+  const [enemies, setEnemies] = useState<EnemyState[]>(initial.enemies)
+  const [hero, setHero] = useState<HeroState | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const logIdRef = useRef(0)
+  const consoleRef = useRef<HTMLDivElement>(null)
+
+  // ─── Logging ─────────────────────────────────────────────────────────────
+
+  const addLog = useCallback((type: LogType, message: string) => {
+    setLogs((prev) => {
+      const next = [...prev, { id: logIdRef.current++, type, message }]
+      return next.slice(-80)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (consoleRef.current) {
+      consoleRef.current.scrollTop = consoleRef.current.scrollHeight
+    }
+  }, [logs])
+
+  // ─── Adjacency helpers ─────────────────────────────────────────────────────
+
+  const adjacentEnemies = useCallback(
+    (h: HeroState): EnemyState[] =>
+      enemies.filter(
+        (e) => e.alive && Math.abs(e.row - h.row) + Math.abs(e.col - h.col) === 1
+      ),
+    [enemies]
+  )
+
+  const hasAdjacentEnemy = useMemo(
+    () => (hero ? adjacentEnemies(hero).length > 0 : false),
+    [hero, adjacentEnemies]
+  )
+
+  // ─── Start / reset ──────────────────────────────────────────────────────────
+
+  const startGame = useCallback(() => {
+    const fresh = buildGrid()
+    const preset = PRESETS[selectedClass]
+    const name =
+      nameInput.trim() || (selectedClass === 'guerreiro' ? 'Guerreiro' : 'Mago')
+    const newHero: HeroState = {
+      name,
+      class: selectedClass,
+      ...preset,
+      level: 1,
+      xp: 0,
+      coins: 0,
+      passos: 0,
+      row: HERO_START.row,
+      col: HERO_START.col,
+    }
+    setGrid(fresh.grid)
+    setEnemies(fresh.enemies)
+    setHero(newHero)
+    logIdRef.current = 0
+    setLogs([
+      {
+        id: logIdRef.current++,
+        type: 'instanciacao',
+        message: `new ${
+          selectedClass === 'guerreiro' ? 'Guerreiro' : 'Mago'
+        }("${name}") instanciado. Objeto Personagem criado na memória.`,
+      },
+      {
+        id: logIdRef.current++,
+        type: 'info',
+        message:
+          'Nexus Heroes iniciado. Alcance o portal ciano coletando Hero Coins.',
+      },
+    ])
+    setPhase('playing')
+  }, [selectedClass, nameInput])
+
+  const resetToSelect = useCallback(() => {
+    setPhase('select')
+    setHero(null)
+    setNameInput('')
+  }, [])
+
+  // ─── XP + level up ─────────────────────────────────────────────────────────
+
+  const applyXp = useCallback(
+    (h: HeroState, gained: number): HeroState => {
+      const newXp = h.xp + gained
+      const newLevel = levelForXp(newXp)
+      let next: HeroState = { ...h, xp: newXp }
+      if (newLevel > h.level) {
+        const levelsGained = newLevel - h.level
+        const maxHp = h.maxHp + 15 * levelsGained
+        const maxMana = h.maxMana + 10 * levelsGained
+        const atk = h.atk + 5 * levelsGained
+        const matk = h.matk + 8 * levelsGained
+        next = {
+          ...next,
+          level: newLevel,
+          maxHp,
+          maxMana,
+          atk,
+          matk,
+          hp: maxHp,
+          mana: maxMana,
+        }
+        addLog(
+          'invariante',
+          `subirNivel() chamado. HP e Mana restaurados ao novo máximo. ATK aumentado. Nível ${newLevel}.`
+        )
+      }
+      return next
+    },
+    [addLog]
+  )
+
+  const clearCell = useCallback((row: number, col: number) => {
+    setGrid((g) => {
+      const ng = g.map((r) => [...r])
+      ng[row][col] = '_'
+      return ng
+    })
+  }, [])
+
+  // ─── Collect on landing ─────────────────────────────────────────────────────
+
+  const collectCell = useCallback(
+    (h: HeroState, row: number, col: number): HeroState => {
+      const cell = grid[row][col]
+      let next: HeroState = { ...h, row, col }
+
+      switch (cell) {
+        case 'C': {
+          next = applyXp(next, 20)
+          next = { ...next, coins: next.coins + 5 }
+          addLog(
+            'instanciacao',
+            `new Item("HeroCoin", 5) instanciado. Adicionado ao inventário de ${h.name}.`
+          )
+          clearCell(row, col)
+          break
+        }
+        case 'M': {
+          const capped = Math.min(next.mana + 25, next.maxMana)
+          addLog(
+            'invariante',
+            `setMana(${next.mana + 25}) chamado. Math.min(mana+25, ${next.maxMana}).`
+          )
+          next = { ...next, mana: capped }
+          clearCell(row, col)
+          break
+        }
+        case 'H': {
+          const capped = Math.min(next.hp + 20, next.maxHp)
+          addLog(
+            'invariante',
+            `setVida(${next.hp + 20}) chamado. Math.min(hp+20, ${next.maxHp}).`
+          )
+          next = { ...next, hp: capped }
+          clearCell(row, col)
+          break
+        }
+        case 'T': {
+          const newHp = Math.max(next.hp - 20, 0)
+          addLog(
+            'excecao',
+            `TrapDamageException lançada! setVida(${next.hp - 20}) → Math.max(hp-20, 0). HP: ${newHp}.`
+          )
+          next = { ...next, hp: newHp }
+          clearCell(row, col)
+          if (newHp <= 0) setTimeout(() => setPhase('defeat'), 0)
+          break
+        }
+        case 'P': {
+          addLog(
+            'info',
+            `Portal alcançado! Nexus Heroes completo. Passos: ${next.passos}. Coins: ${next.coins}. Nível: ${next.level}.`
+          )
+          setTimeout(() => setPhase('victory'), 0)
+          break
+        }
+        default:
+          break
+      }
+      return next
+    },
+    [grid, applyXp, addLog, clearCell]
+  )
+
+  // ─── Movement ──────────────────────────────────────────────────────────────
+
+  const move = useCallback(
+    (dRow: number, dCol: number) => {
+      if (phase !== 'playing') return
+      setHero((h) => {
+        if (!h) return h
+        const nRow = h.row + dRow
+        const nCol = h.col + dCol
+        if (
+          nRow < 0 ||
+          nRow >= grid.length ||
+          nCol < 0 ||
+          nCol >= grid[0].length
+        ) {
+          return h
+        }
+        if (grid[nRow][nCol] === 'W') return h
+        if (enemies.some((e) => e.alive && e.row === nRow && e.col === nCol)) {
+          addLog(
+            'info',
+            'Caminho bloqueado por um inimigo. Ataque-o antes de avançar.'
+          )
+          return h
+        }
+        const moved = { ...h, passos: h.passos + 1 }
+        return collectCell(moved, nRow, nCol)
+      })
+    },
+    [phase, grid, enemies, collectCell, addLog]
+  )
+
+  // ─── Combat: sword ─────────────────────────────────────────────────────────
+
+  const attackWithSword = useCallback(() => {
+    if (phase !== 'playing') return
+    setHero((h) => {
+      if (!h) return h
+      const targets = adjacentEnemies(h)
+      if (targets.length === 0) return h
+      const target = targets[0]
+      const dmg = h.atk
+      const remaining = target.hp - dmg
+      addLog(
+        'override',
+        `@Override ${h.name}.atacarComEspada(inimigo) → dano ${dmg}. Inimigo HP: ${remaining}.`
+      )
+
+      let next: HeroState = { ...h }
+
+      if (remaining <= 0) {
+        setEnemies((es) =>
+          es.map((e) =>
+            e.id === target.id ? { ...e, hp: 0, alive: false } : e
+          )
+        )
+        next = applyXp(next, 15)
+        next = { ...next, coins: next.coins + 10 }
+        addLog(
+          'instanciacao',
+          `new Item("HeroCoin", 10) instanciado. Inimigo derrotado por ${h.name}.`
+        )
+      } else {
+        setEnemies((es) =>
+          es.map((e) => (e.id === target.id ? { ...e, hp: remaining } : e))
+        )
+        const newHp = Math.max(next.hp - ENEMY_ATK, 0)
+        addLog(
+          'excecao',
+          `AtaqueRecebidoException! HP reduzido em ${ENEMY_ATK}. setVida() validou: hp >= 0.`
+        )
+        next = { ...next, hp: newHp }
+        if (newHp <= 0) setTimeout(() => setPhase('defeat'), 0)
+      }
+      return next
+    })
+  }, [phase, adjacentEnemies, applyXp, addLog])
+
+  // ─── Combat: magic ─────────────────────────────────────────────────────────
+
+  const useMagic = useCallback(() => {
+    if (phase !== 'playing') return
+    setHero((h) => {
+      if (!h) return h
+      if (h.mana < MAGIC_COST) {
+        addLog(
+          'excecao',
+          `ManaInsuficienteException lançada! usarMagia() requer ${MAGIC_COST} de Mana. Atual: ${h.mana}.`
+        )
+        return h
+      }
+      const targets = adjacentEnemies(h)
+      addLog(
+        'override',
+        `@Override ${h.name}.usarMagia() sobrescreve Personagem.usarMagia(). Dano mágico: ${h.matk}.`
+      )
+      addLog(
+        'invariante',
+        `setMana(${h.mana - MAGIC_COST}) chamado. Validação: mana >= 0.`
+      )
+
+      let next: HeroState = { ...h, mana: h.mana - MAGIC_COST }
+
+      if (targets.length > 0) {
+        const targetIds = new Set(targets.map((t) => t.id))
+        let defeated = 0
+        setEnemies((es) =>
+          es.map((e) => {
+            if (!targetIds.has(e.id)) return e
+            const remaining = e.hp - next.matk
+            if (remaining <= 0) {
+              defeated++
+              return { ...e, hp: 0, alive: false }
+            }
+            return { ...e, hp: remaining }
+          })
+        )
+        if (defeated > 0) {
+          next = applyXp(next, 15 * defeated)
+          next = { ...next, coins: next.coins + 10 * defeated }
+          addLog(
+            'instanciacao',
+            `${defeated} inimigo(s) derrotado(s). new Item("HeroCoin", ${10 * defeated}) instanciado.`
+          )
+        }
+      } else {
+        addLog(
+          'info',
+          'Magia conjurada, mas nenhum inimigo adjacente foi atingido.'
+        )
+      }
+      return next
+    })
+  }, [phase, adjacentEnemies, applyXp, addLog])
+
+  // ─── Keyboard controls ─────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (phase !== 'playing') return
+    const onKey = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault()
+          move(-1, 0)
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          move(1, 0)
+          break
+        case 'ArrowLeft':
+          e.preventDefault()
+          move(0, -1)
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          move(0, 1)
+          break
+        default:
+          break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase, move])
+
+  // ─── Selection screen ──────────────────────────────────────────────────────
+
+  if (phase === 'select') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
+        <h1 className="mb-2 text-4xl font-black tracking-tight text-cyan-300">
+          🗡️ Nexus Heroes
+        </h1>
+        <p className="mb-8 text-slate-400">
+          Labirinto 3D isométrico · conceitos de POO no console
+        </p>
+
+        <div className="mb-6 grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+          {(['guerreiro', 'mago'] as HeroClass[]).map((cls) => {
+            const p = PRESETS[cls]
+            const active = selectedClass === cls
+            return (
+              <button
+                key={cls}
+                type="button"
+                onClick={() => setSelectedClass(cls)}
+                className={`rounded-2xl border p-5 text-left transition ${
+                  active
+                    ? 'border-cyan-400 bg-cyan-500/10 ring-2 ring-cyan-400/50'
+                    : 'border-slate-700 bg-slate-900 hover:border-slate-500'
+                }`}
+              >
+                <div className="mb-2 text-2xl font-bold capitalize">
+                  {cls === 'guerreiro' ? '⚔️ Guerreiro' : '🔮 Mago'}
+                </div>
+                <ul className="space-y-1 text-sm text-slate-300">
+                  <li>HP: {p.maxHp}</li>
+                  <li>Mana: {p.maxMana}</li>
+                  <li>ATK (espada): {p.atk}</li>
+                  <li>MATK (magia): {p.matk}</li>
+                </ul>
+              </button>
+            )
+          })}
+        </div>
+
+        <input
+          value={nameInput}
+          onChange={(e) => setNameInput(e.target.value)}
+          placeholder="Nome do herói"
+          maxLength={16}
+          className="mb-4 w-full max-w-md rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center outline-none focus:border-cyan-400"
+        />
+
+        <button
+          type="button"
+          onClick={startGame}
+          className="rounded-xl bg-cyan-500 px-8 py-3 font-bold text-slate-950 transition hover:bg-cyan-400"
+        >
+          Iniciar Aventura
+        </button>
+      </div>
+    )
+  }
+
+  // ─── Victory ──────────────────────────────────────────────────────────────
+
+  if (phase === 'victory' && hero) {
+    const efficiency =
+      hero.passos > 0 ? (hero.coins / hero.passos).toFixed(2) : '∞'
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
+        <h1 className="mb-4 text-5xl font-black text-cyan-300">🏆 Vitória!</h1>
+        <p className="mb-6 text-slate-400">{hero.name} alcançou o Nexus.</p>
+        <div className="mb-8 grid grid-cols-2 gap-4 text-center">
+          <Stat label="🪙 Coins" value={hero.coins} />
+          <Stat label="👣 Passos" value={hero.passos} />
+          <Stat label="⭐ Nível" value={hero.level} />
+          <Stat label="⚡ Eficiência" value={efficiency} />
+        </div>
+        <button
+          type="button"
+          onClick={resetToSelect}
+          className="rounded-xl bg-cyan-500 px-8 py-3 font-bold text-slate-950 transition hover:bg-cyan-400"
+        >
+          Jogar Novamente
+        </button>
+      </div>
+    )
+  }
+
+  // ─── Defeat ──────────────────────────────────────────────────────────────
+
+  if (phase === 'defeat' && hero) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
+        <h1 className="mb-4 text-5xl font-black text-red-500">💀 Derrota</h1>
+        <p className="mb-2 max-w-md text-center text-slate-400">
+          A escuridão do labirinto consumiu {hero.name}. O Nexus permanece
+          inalcançado... por enquanto.
+        </p>
+        <p className="mb-8 text-sm text-slate-500">
+          Passos: {hero.passos} · Coins: {hero.coins} · Nível: {hero.level}
+        </p>
+        <button
+          type="button"
+          onClick={resetToSelect}
+          className="rounded-xl bg-red-500 px-8 py-3 font-bold text-slate-950 transition hover:bg-red-400"
+        >
+          Tentar Novamente
+        </button>
+      </div>
+    )
+  }
+
+  // ─── Playing ──────────────────────────────────────────────────────────────
+
+  if (!hero) return null
+
+  return (
+    <div className="flex h-screen w-full flex-col bg-slate-950 text-slate-100 lg:flex-row">
+      {/* 3D canvas ~65% */}
+      <div className="relative h-[55vh] w-full lg:h-full lg:w-[65%]">
+        <GameCanvas
+          grid={grid}
+          heroClass={hero.class}
+          heroRow={hero.row}
+          heroCol={hero.col}
+          enemies={enemies}
+        />
+
+        {/* Combat buttons overlay */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-wrap justify-center gap-3 px-4">
+          <button
+            type="button"
+            onClick={attackWithSword}
+            disabled={!hasAdjacentEnemy}
+            className={`pointer-events-auto rounded-xl px-5 py-3 font-bold shadow-lg transition ${
+              hasAdjacentEnemy
+                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                : 'cursor-not-allowed bg-amber-500/50 text-slate-950/60 opacity-50'
+            }`}
+          >
+            🗡️ Atacar com Espada
+          </button>
+          <button
+            type="button"
+            onClick={useMagic}
+            disabled={hero.mana < MAGIC_COST}
+            className={`pointer-events-auto rounded-xl px-5 py-3 font-bold shadow-lg transition ${
+              hero.mana >= MAGIC_COST
+                ? 'bg-indigo-500 text-white hover:bg-indigo-400'
+                : 'cursor-not-allowed bg-indigo-500/50 text-white/60 opacity-50'
+            }`}
+          >
+            ✨ Usar Magia ({MAGIC_COST} MP)
+          </button>
+        </div>
+      </div>
+
+      {/* Side panel ~35% */}
+      <aside className="flex h-[45vh] w-full flex-col border-l border-slate-800 bg-slate-900 lg:h-full lg:w-[35%]">
+        {/* HUD */}
+        <div className="border-b border-slate-800 p-4">
+          <div className="mb-3 flex items-center gap-2 text-lg font-bold">
+            <span>{hero.class === 'guerreiro' ? '⚔️' : '🔮'}</span>
+            <span className="truncate">{hero.name}</span>
+            <span className="ml-auto rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+              Nível {hero.level}
+            </span>
+          </div>
+
+          <Bar label="HP" value={hero.hp} max={hero.maxHp} color="bg-red-500" />
+          <Bar label="MP" value={hero.mana} max={hero.maxMana} color="bg-blue-500" />
+          <Bar
+            label="XP"
+            value={hero.xp % 50}
+            max={50}
+            color="bg-purple-500"
+            display={`${hero.xp}`}
+          />
+
+          <div className="mt-3 flex justify-between text-sm">
+            <span>
+              🪙 Coins: <b className="text-amber-300">{hero.coins}</b>
+            </span>
+            <span>
+              👣 Passos: <b className="text-slate-200">{hero.passos}</b>
+            </span>
+          </div>
+
+          {/* D-pad */}
+          <div className="mt-4 grid grid-cols-3 place-items-center gap-1.5">
+            <span />
+            <DpadBtn onClick={() => move(-1, 0)}>↑</DpadBtn>
+            <span />
+            <DpadBtn onClick={() => move(0, -1)}>←</DpadBtn>
+            <DpadBtn onClick={() => move(1, 0)}>↓</DpadBtn>
+            <DpadBtn onClick={() => move(0, 1)}>→</DpadBtn>
+          </div>
+          <p className="mt-2 text-center text-[11px] text-slate-500">
+            Use as setas do teclado ou o D-pad
+          </p>
+        </div>
+
+        {/* System Console */}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b border-slate-800 bg-zinc-950 px-3 py-2">
+            <span className="h-3 w-3 rounded-full bg-red-500" />
+            <span className="h-3 w-3 rounded-full bg-yellow-500" />
+            <span className="h-3 w-3 rounded-full bg-green-500" />
+            <span className="ml-2 text-xs font-semibold text-zinc-400">
+              System Console — POO
+            </span>
+          </div>
+          <div
+            ref={consoleRef}
+            className="min-h-0 flex-1 space-y-1.5 overflow-y-auto bg-zinc-950 p-3 font-mono text-[11px] leading-snug"
+          >
+            {logs.map((log) => {
+              const meta = LOG_META[log.type]
+              return (
+                <div key={log.id} className="flex flex-col gap-0.5">
+                  <span
+                    className={`inline-block w-fit rounded border px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${meta.badge}`}
+                  >
+                    {meta.label}
+                  </span>
+                  <span className={`${meta.text} break-words`}>
+                    &gt; {log.message}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </aside>
+    </div>
   )
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Small UI pieces ──────────────────────────────────────────────────────────
 
-const CELL_ICONS: Record<CellType, string> = {
-  '_': '',
-  W: '🧱',
-  C: '📦',
-  M: '💎',
-  H: '🍀',
-  T: '⚠️',
-  E: '👾',
-  P: '🌀',
-  S: '',
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-900 px-6 py-4">
+      <div className="text-xs text-slate-400">{label}</div>
+      <div className="text-2xl font-bold text-cyan-300">{value}</div>
+    </div>
+  )
 }
 
-const HERO_ICONS: Record<HeroClass, string> = {
-  guerreiro: '🗡️',
-  mago: '🔮',
-}
-
-const HERO_STATS: Record<HeroClass, { hp: number; mana: number; atk: number }> = {
-  guerreiro: { hp: 120, mana: 40, atk: 25 },
-  mago: { hp: 80, mana: 120, atk: 35 },
-}
-
-const LOG_BADGE_STYLE: Record<LogType, string> = {
-  instanciacao: 'bg-cyan-900/60 text-cyan-300 border border-cyan-700',
-  invariante:   'bg-green-900/60 text-green-300 border border-green-700',
-  excecao:      'bg-red-900/60 text-red-300 border border-red-700',
-  override:     'bg-purple-900/60 text-purple-300 border border-purple-700',
-  info:         'bg-slate-700/60 text-slate-300 border border-slate-600',
-}
-
-const LOG_TEXT_STYLE: Record<LogType, string> = {
-  instanciacao: 'text-cyan-200',
-  invariante:   'text-green-200',
-  excecao:      'text-red-200',
-  override:     'text-purple-200',
-  info:         'text-slate-300',
-}
-
-const LOG_BADGE_LABEL: Record<LogType, string> = {
-  instanciacao: 'INSTANCIAÇÃO',
-  invariante:   'INVARIANTE',
-  excecao:      'EXCEÇÃO',
-  override:     'OVERRIDE',
-  info:         'INFO',
-}
-
-// ─── Bar component ───────────────────────────────────────────────────────────
-
-function StatBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+function Bar({
+  label,
+  value,
+  max,
+  color,
+  display,
+}: {
+  label: string
+  value: number
+  max: number
+  color: string
+  display?: string
+}) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100))
   return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{label}</span>
-        <span className="text-xs font-mono text-slate-300">{value}/{max}</span>
+    <div className="mb-2">
+      <div className="mb-1 flex justify-between text-xs text-slate-400">
+        <span className="font-semibold">{label}</span>
+        <span>{display ?? `${Math.round(value)} / ${max}`}</span>
       </div>
-      <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${color}`}
+          className={`h-full rounded-full transition-all ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -121,528 +785,20 @@ function StatBar({ label, value, max, color }: { label: string; value: number; m
   )
 }
 
-// ─── Directional pad ─────────────────────────────────────────────────────────
-
-function DPad({ onMove }: { onMove: (dr: number, dc: number) => void }) {
+function DpadBtn({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode
+  onClick: () => void
+}) {
   return (
-    <div className="grid grid-cols-3 gap-1 w-28">
-      <div />
-      <button
-        onPointerDown={() => onMove(-1, 0)}
-        className="aspect-square rounded-lg bg-slate-700 hover:bg-slate-600 active:bg-slate-500 flex items-center justify-center text-slate-200 text-lg border border-slate-600 transition select-none"
-        aria-label="Up"
-      >▲</button>
-      <div />
-      <button
-        onPointerDown={() => onMove(0, -1)}
-        className="aspect-square rounded-lg bg-slate-700 hover:bg-slate-600 active:bg-slate-500 flex items-center justify-center text-slate-200 text-lg border border-slate-600 transition select-none"
-        aria-label="Left"
-      >◀</button>
-      <div className="aspect-square rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">✦</div>
-      <button
-        onPointerDown={() => onMove(0, 1)}
-        className="aspect-square rounded-lg bg-slate-700 hover:bg-slate-600 active:bg-slate-500 flex items-center justify-center text-slate-200 text-lg border border-slate-600 transition select-none"
-        aria-label="Right"
-      >▶</button>
-      <div />
-      <button
-        onPointerDown={() => onMove(1, 0)}
-        className="aspect-square rounded-lg bg-slate-700 hover:bg-slate-600 active:bg-slate-500 flex items-center justify-center text-slate-200 text-lg border border-slate-600 transition select-none"
-        aria-label="Down"
-      >▼</button>
-      <div />
-    </div>
-  )
-}
-
-// ─── Main Game Component ─────────────────────────────────────────────────────
-
-export default function NexusHeroesPage() {
-  const [phase, setPhase] = useState<GamePhase>('select')
-  const [pendingClass, setPendingClass] = useState<HeroClass | null>(null)
-  const [nameInput, setNameInput] = useState('')
-  const [hero, setHero] = useState<HeroState | null>(null)
-  const [grid, setGrid] = useState<Cell[][]>(buildInitialGrid())
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const logIdRef = useRef(0)
-  const consoleRef = useRef<HTMLDivElement>(null)
-
-  const addLog = useCallback((type: LogType, message: string) => {
-    const id = ++logIdRef.current
-    setLogs(prev => [...prev.slice(-49), { id, type, message }])
-  }, [])
-
-  // Auto-scroll console
-  useEffect(() => {
-    if (consoleRef.current) {
-      consoleRef.current.scrollTop = consoleRef.current.scrollHeight
-    }
-  }, [logs])
-
-  const startHero = useCallback((heroClass: HeroClass, name: string) => {
-    const stats = HERO_STATS[heroClass]
-    const resolvedName = name.trim() || (heroClass === 'guerreiro' ? 'Guerreiro' : 'Mago')
-    const newHero: HeroState = {
-      name: resolvedName,
-      class: heroClass,
-      hp: stats.hp,
-      maxHp: stats.hp,
-      mana: stats.mana,
-      maxMana: stats.mana,
-      atk: stats.atk,
-      level: 1,
-      xp: 0,
-      row: 7,
-      col: 0,
-    }
-    setHero(newHero)
-    setGrid(buildInitialGrid())
-    setLogs([])
-    logIdRef.current = 0
-    setPhase('playing')
-
-    if (heroClass === 'guerreiro') {
-      addLog('instanciacao', `new Guerreiro("${resolvedName}", 120, 40) executado. super("${resolvedName}", 120, 40) chamou Personagem(String, int, int).`)
-    } else {
-      addLog('instanciacao', `new Mago("${resolvedName}", 80, 120) executado. super("${resolvedName}", 80, 120) chamou Personagem(String, int, int).`)
-    }
-  }, [addLog])
-
-  const handleNameSubmit = useCallback(() => {
-    if (!pendingClass) return
-    startHero(pendingClass, nameInput)
-    setNameInput('')
-    setPendingClass(null)
-  }, [pendingClass, nameInput, startHero])
-
-  const moveHero = useCallback((dr: number, dc: number) => {
-    if (phase !== 'playing' || !hero) return
-
-    const newRow = hero.row + dr
-    const newCol = hero.col + dc
-
-    if (newRow < 0 || newRow > 7 || newCol < 0 || newCol > 7) return
-
-    const cell = grid[newRow][newCol]
-    if (cell.type === 'W') return
-
-    const updatedGrid = grid.map(row => row.map(c => ({ ...c })))
-    let updatedHero = { ...hero, row: newRow, col: newCol }
-
-    if (!cell.collected) {
-      switch (cell.type) {
-        case 'C':
-          updatedGrid[newRow][newCol].collected = true
-          updatedHero.xp += 20
-          if (updatedHero.xp >= updatedHero.level * 50) {
-            updatedHero.level += 1
-            updatedHero.xp = 0
-          }
-          addLog('instanciacao', `new Item("EspadaRuna", 10) instanciado e adicionado ao inventário de ${updatedHero.name}. Objeto criado via new na heap.`)
-          break
-
-        case 'M': {
-          updatedGrid[newRow][newCol].collected = true
-          const prevMana = updatedHero.mana
-          updatedHero.mana = Math.min(updatedHero.mana + 15, updatedHero.maxMana)
-          addLog('invariante', `setMana(${prevMana + 15}) chamado. Validação: mana <= ${updatedHero.maxMana}. Valor ajustado para Math.min(mana+15, maxMana).`)
-          break
-        }
-
-        case 'H': {
-          updatedGrid[newRow][newCol].collected = true
-          const prevHp = updatedHero.hp
-          updatedHero.hp = Math.min(updatedHero.hp + 20, updatedHero.maxHp)
-          addLog('invariante', `setVida(${prevHp + 20}) chamado. Validação: hp <= ${updatedHero.maxHp}. HP não pode exceder o máximo definido no construtor.`)
-          break
-        }
-
-        case 'T': {
-          updatedGrid[newRow][newCol].collected = true
-          const prevHpTrap = updatedHero.hp
-          updatedHero.hp = Math.max(updatedHero.hp - 15, 0)
-          addLog('excecao', `TrapDamageException lançada! setVida(${prevHpTrap - 15}) → Math.max(hp-15, 0). HP atual: ${updatedHero.hp}.`)
-          break
-        }
-
-        case 'E': {
-          updatedGrid[newRow][newCol].collected = true
-          updatedHero.xp += 30
-          if (updatedHero.xp >= updatedHero.level * 50) {
-            updatedHero.level += 1
-            updatedHero.xp = 0
-          }
-          addLog('override', `${updatedHero.name}.calcularDano() sobrescreve Personagem.calcularDano(). Dano base: ${updatedHero.atk}.`)
-          updatedHero.hp = Math.max(updatedHero.hp - 10, 0)
-          addLog('excecao', `DanoRecebidoException! HP reduzido em 10. setVida() validou: hp >= 0.`)
-          break
-        }
-
-        case 'P':
-          addLog('info', `Fase 1 completa! Estado final — ${updatedHero.name}: HP ${updatedHero.hp}/${updatedHero.maxHp}, Mana ${updatedHero.mana}/${updatedHero.maxMana}, Nível ${updatedHero.level}.`)
-          setHero(updatedHero)
-          setGrid(updatedGrid)
-          setPhase('victory')
-          return
-
-        default:
-          break
-      }
-    }
-
-    setGrid(updatedGrid)
-
-    if (updatedHero.hp <= 0) {
-      setHero(updatedHero)
-      setPhase('defeat')
-      return
-    }
-
-    setHero(updatedHero)
-  }, [phase, hero, grid, addLog])
-
-  // Keyboard listener
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (phase !== 'playing') return
-      switch (e.key) {
-        case 'ArrowUp':    e.preventDefault(); moveHero(-1, 0); break
-        case 'ArrowDown':  e.preventDefault(); moveHero(1, 0);  break
-        case 'ArrowLeft':  e.preventDefault(); moveHero(0, -1); break
-        case 'ArrowRight': e.preventDefault(); moveHero(0, 1);  break
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [phase, moveHero])
-
-  const restartGame = () => {
-    setPhase('select')
-    setHero(null)
-    setGrid(buildInitialGrid())
-    setLogs([])
-    setPendingClass(null)
-    setNameInput('')
-  }
-
-  // ── Render: Hero selection ──────────────────────────────────────────────────
-
-  if (phase === 'select') {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-900/40 border border-violet-700/50 text-violet-300 text-xs font-semibold tracking-widest mb-4">
-            NEXUS HEROES
-          </div>
-          <h1 className="text-4xl font-black text-white mb-2 tracking-tight">Escolha seu Herói</h1>
-          <p className="text-slate-400 text-sm">Cada herói ensina conceitos POO de forma diferente</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">
-          {/* Guerreiro card */}
-          <button
-            onClick={() => { setPendingClass('guerreiro'); setPhase('name') }}
-            className="group relative rounded-2xl border border-slate-700 bg-slate-900 hover:border-amber-500/60 hover:bg-slate-800 transition-all duration-200 p-6 text-left overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="text-5xl mb-4">🗡️</div>
-            <h2 className="text-xl font-bold text-white mb-1">Guerreiro</h2>
-            <p className="text-slate-400 text-xs mb-4">Especialista em combate corpo-a-corpo</p>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">HP</span>
-                <span className="text-green-400 font-mono">120</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Mana</span>
-                <span className="text-blue-400 font-mono">40</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">ATK</span>
-                <span className="text-amber-400 font-mono">25</span>
-              </div>
-            </div>
-          </button>
-
-          {/* Mago card */}
-          <button
-            onClick={() => { setPendingClass('mago'); setPhase('name') }}
-            className="group relative rounded-2xl border border-slate-700 bg-slate-900 hover:border-violet-500/60 hover:bg-slate-800 transition-all duration-200 p-6 text-left overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="text-5xl mb-4">🔮</div>
-            <h2 className="text-xl font-bold text-white mb-1">Mago</h2>
-            <p className="text-slate-400 text-xs mb-4">Mestre das artes arcanas e magia</p>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">HP</span>
-                <span className="text-green-400 font-mono">80</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">Mana</span>
-                <span className="text-blue-400 font-mono">120</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500">ATK</span>
-                <span className="text-amber-400 font-mono">35</span>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <p className="mt-8 text-slate-600 text-xs">Use as setas do teclado ou o D-Pad para mover seu herói</p>
-      </div>
-    )
-  }
-
-  // ── Render: Name input ──────────────────────────────────────────────────────
-
-  if (phase === 'name' && pendingClass) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <div className="text-6xl text-center mb-6">{HERO_ICONS[pendingClass]}</div>
-          <h2 className="text-2xl font-black text-white text-center mb-1">
-            {pendingClass === 'guerreiro' ? 'Guerreiro' : 'Mago'}
-          </h2>
-          <p className="text-slate-400 text-sm text-center mb-8">Como seu herói será chamado?</p>
-          <div className="space-y-3">
-            <input
-              autoFocus
-              type="text"
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleNameSubmit()}
-              placeholder={pendingClass === 'guerreiro' ? 'Guerreiro' : 'Mago'}
-              maxLength={20}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-sm"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setPhase('select'); setPendingClass(null); setNameInput('') }}
-                className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700 transition"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={handleNameSubmit}
-                className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500 transition"
-              >
-                Iniciar Jogo
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Render: Victory ─────────────────────────────────────────────────────────
-
-  if (phase === 'victory' && hero) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-7xl mb-4">🌀</div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-900/40 border border-green-700/50 text-green-300 text-xs font-semibold tracking-widest mb-4">
-          VITÓRIA
-        </div>
-        <h1 className="text-3xl font-black text-white mb-2">{hero.name} chegou ao Portal!</h1>
-        <p className="text-slate-400 text-sm mb-6">Fase 1 completa. Todos os conceitos POO foram dominados.</p>
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 mb-6 text-left w-full max-w-xs">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Estado Final</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-slate-400">HP</span><span className="text-green-400 font-mono">{hero.hp}/{hero.maxHp}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Mana</span><span className="text-blue-400 font-mono">{hero.mana}/{hero.maxMana}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Nível</span><span className="text-violet-400 font-mono">{hero.level}</span></div>
-          </div>
-        </div>
-        <button
-          onClick={restartGame}
-          className="rounded-xl bg-violet-600 px-8 py-3 text-sm font-bold text-white hover:bg-violet-500 transition"
-        >
-          Jogar Novamente
-        </button>
-      </div>
-    )
-  }
-
-  // ── Render: Defeat ──────────────────────────────────────────────────────────
-
-  if (phase === 'defeat' && hero) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-7xl mb-4">💀</div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-900/40 border border-red-700/50 text-red-300 text-xs font-semibold tracking-widest mb-4">
-          DERROTA
-        </div>
-        <h1 className="text-3xl font-black text-white mb-2">{hero.name} foi derrotado!</h1>
-        <p className="text-slate-400 text-sm mb-8">HP chegou a zero. Uma nova exceção não tratada encerrou a execução.</p>
-        <button
-          onClick={restartGame}
-          className="rounded-xl bg-red-700 px-8 py-3 text-sm font-bold text-white hover:bg-red-600 transition"
-        >
-          Jogar Novamente
-        </button>
-      </div>
-    )
-  }
-
-  // ── Render: Main game ───────────────────────────────────────────────────────
-
-  if (phase !== 'playing' || !hero) return null
-
-  const xpPct = Math.min(100, (hero.xp / (hero.level * 50)) * 100)
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-      {/* Title bar */}
-      <header className="flex items-center justify-between px-4 py-2.5 bg-zinc-900 border-b border-slate-700">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">{HERO_ICONS[hero.class]}</span>
-          <span className="font-bold text-sm text-white">{hero.name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-full bg-violet-900/60 border border-violet-700 text-violet-300 text-xs font-bold">
-            Nv {hero.level}
-          </span>
-          <span className="text-xs text-slate-500">Nexus Heroes</span>
-        </div>
-      </header>
-
-      {/* Main area */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden">
-
-        {/* Arena + Console column */}
-        <div className="flex-1 flex flex-col min-w-0">
-
-          {/* Arena */}
-          <div className="p-3 sm:p-4">
-            <div className="grid grid-cols-8 gap-0.5 aspect-square max-w-lg mx-auto w-full">
-              {grid.map((row, r) =>
-                row.map((cell, c) => {
-                  const isHero = hero.row === r && hero.col === c
-                  const isPortal = cell.type === 'P'
-                  const isWall = cell.type === 'W'
-                  const isEmpty = cell.type === '_' || cell.type === 'S' || cell.collected
-
-                  let cellBg = 'bg-slate-900'
-                  if (isWall) cellBg = 'bg-slate-800'
-                  if (isPortal) cellBg = 'bg-slate-900'
-
-                  return (
-                    <div
-                      key={`${r}-${c}`}
-                      className={`
-                        relative aspect-square flex items-center justify-center rounded
-                        border border-slate-800/60 text-base select-none
-                        ${cellBg}
-                        ${isHero ? 'ring-2 ring-violet-400 ring-offset-0 z-10' : ''}
-                        ${!isWall && !isEmpty ? 'cursor-default' : ''}
-                      `}
-                    >
-                      {isHero ? (
-                        <span className="text-sm leading-none">{HERO_ICONS[hero.class]}</span>
-                      ) : cell.collected ? (
-                        <span className="text-slate-800 text-xs">·</span>
-                      ) : (
-                        <span className="text-sm leading-none">{CELL_ICONS[cell.type] || ''}</span>
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-
-          {/* System Console */}
-          <div className="flex-1 mx-3 sm:mx-4 mb-3 sm:mb-4 rounded-xl border border-slate-700 bg-zinc-900 flex flex-col min-h-32 max-h-64 lg:max-h-none lg:flex-1">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700">
-              <div className="flex gap-1">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-              </div>
-              <span className="text-xs font-mono text-slate-500">system.console — POO Nexus v1.0</span>
-            </div>
-            <div
-              ref={consoleRef}
-              className="flex-1 overflow-y-auto p-3 space-y-1.5 font-mono text-xs"
-            >
-              {logs.length === 0 && (
-                <div className="text-slate-600 italic">Aguardando eventos...</div>
-              )}
-              {logs.map(log => (
-                <div key={log.id} className="flex items-start gap-2">
-                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${LOG_BADGE_STYLE[log.type]}`}>
-                    {LOG_BADGE_LABEL[log.type]}
-                  </span>
-                  <span className={`leading-relaxed ${LOG_TEXT_STYLE[log.type]}`}>{log.message}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* HUD panel */}
-        <aside className="w-full lg:w-56 xl:w-64 bg-zinc-900 border-t lg:border-t-0 lg:border-l border-slate-700 p-4 flex flex-col gap-4">
-
-          {/* Stats */}
-          <div className="space-y-3">
-            <StatBar
-              label="HP"
-              value={hero.hp}
-              max={hero.maxHp}
-              color={hero.hp / hero.maxHp > 0.5 ? 'bg-green-500' : hero.hp / hero.maxHp > 0.25 ? 'bg-yellow-500' : 'bg-red-500'}
-            />
-            <StatBar
-              label="Mana"
-              value={hero.mana}
-              max={hero.maxMana}
-              color="bg-blue-500"
-            />
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">XP</span>
-                <span className="text-xs font-mono text-slate-300">{hero.xp}/{hero.level * 50}</span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
-                <div
-                  className="h-full rounded-full bg-violet-500 transition-all duration-300"
-                  style={{ width: `${xpPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="border-t border-slate-700 pt-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Legenda</p>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-              {([
-                ['🧱', 'Parede'],
-                ['📦', 'Baú'],
-                ['💎', 'Mana'],
-                ['🍀', 'Vida'],
-                ['⚠️', 'Armadilha'],
-                ['👾', 'Inimigo'],
-                ['🌀', 'Portal'],
-              ] as [string, string][]).map(([icon, label]) => (
-                <div key={label} className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <span>{icon}</span>
-                  <span>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* D-Pad */}
-          <div className="border-t border-slate-700 pt-3 flex flex-col items-center gap-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide self-start">Controles</p>
-            <DPad onMove={moveHero} />
-            <p className="text-[10px] text-slate-600 text-center">ou use as setas do teclado</p>
-          </div>
-        </aside>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-lg font-bold text-slate-200 transition hover:bg-slate-700 active:scale-95"
+    >
+      {children}
+    </button>
   )
 }
