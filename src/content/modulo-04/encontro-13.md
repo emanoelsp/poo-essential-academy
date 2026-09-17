@@ -42,6 +42,18 @@ f.calcularSalario(); // retorna 0 — resultado sem significado!
 
 **Funcionário genérico** é um conceito abstrato que só existe para categorizar. Nunca deve ser instanciado diretamente.
 
+### Atividade 1 — Diagnose o design quebrado
+
+```bug-hunt
+BUG:1:Funcionario f = new Funcionario("Carlos", "111.111.111-11", "TI");\nSystem.out.println(f.calcularSalario()); // → 0.0:Funcionario é classe concreta. O compilador permite new Funcionario(...) e calcularSalario() devolve 0 — sem nenhuma regra de negócio.
+Q:Qual é o problema conceitual de permitir new Funcionario(...)?:Funcionário é um conceito abstrato — na vida real só existem Horista, Assalariado e Comissionado; jamais um "funcionário genérico"|Funcionario não deveria ter construtor público — apenas protected|O construtor aceita String onde deveria aceitar enum de departamento|Falta validação de CPF no construtor para garantir formato correto:0
+Q:O que o retorno 0 em calcularSalario() representa no contexto de negócio?:Um valor fictício sem significado — nenhuma empresa calcula salário como zero fixo para qualquer tipo de funcionário|O salário mínimo legal que toda classe-base deve garantir|Uma convenção de Java que indica método "a ser implementado depois"|O valor padrão correto para estagiários e aprendizes na hierarquia:0
+
+BUG:2:class Vendedor extends Funcionario {\n    // esqueceu de implementar calcularSalario()\n    private double comissao;\n}\n// Vendedor v = new Vendedor("Eva", "222", "Vendas"):Funcionario concreto com calcularSalario() retornando 0. Vendedor herda silenciosamente esse retorno zero sem nenhum aviso do compilador.
+Q:Por que herdar calcularSalario() retornando 0 é pior do que um erro de compilação?:O sistema roda normalmente mas gera folha de pagamento errada — zero para toda equipe de vendas sem nenhum alerta|Causar erro em runtime seria melhor porque ao menos o sistema pararia imediatamente|O Java lança NullPointerException ao retornar 0 de um método double — erraria em tempo de execução|O problema só aparece ao comparar salários com ==, que não funciona para double:0
+Q:Que mecanismo Java força cada subclasse a definir sua própria regra de cálculo?:Declarar calcularSalario() como abstract na superclasse — o compilador então exige @Override em toda subclasse concreta|Adicionar @Override na superclasse para propagar a obrigação para baixo|Lançar UnsupportedOperationException() no corpo do método em Funcionario|Tornar o campo salario como private final para que ninguém acesse sem calcular:0
+```
+
 ---
 
 ## 2. Classes Abstratas — conceitos sem instanciação
@@ -133,6 +145,36 @@ public class Horista extends Funcionario {
 }
 ```
 
+### Atividade 2 — Complete o diagrama da hierarquia
+
+```fill-uml
+CLASS:Funcionario
+ATTR:# nome : String
+ATTR:# cpf : String
+ATTR:# departamento : String
+METHOD:___:abstract double calcularSalario()
+METHOD:getNome() String
+METHOD:getDepartamento() String
+METHOD:toString() String
+
+CLASS:Horista
+ATTR:- valorHora : double
+ATTR:- horasTrabalhadas : int
+METHOD:registrarHoras(int horas) void
+METHOD:___:@Override double calcularSalario()
+
+CLASS:Assalariado
+ATTR:___:- salarioFixo : double
+METHOD:___:@Override double calcularSalario()
+
+CLASS:Comissionado
+ATTR:- salarioBase : double
+ATTR:- totalVendas : double
+ATTR:___:- taxa : double
+METHOD:registrarVenda(double) void
+METHOD:___:@Override double calcularSalario()
+```
+
 ---
 
 ## 3. Tentando instanciar uma classe abstrata
@@ -145,6 +187,19 @@ public class Horista extends Funcionario {
 Funcionario f = new Horista("Ana", "111", "TI", 45.0);
 // 'f' é do TIPO Funcionario (referência), mas o OBJETO é Horista
 // Isso é o fundamento do Polimorfismo — veremos no Módulo 5!
+```
+
+### Atividade 3 — Preveja o compilador
+
+```fill-table
+COL1:Código Java (Funcionario é abstract class)
+COL2:Compila ou Erro?
+LEGEND:Para cada instrução, preveja o resultado. Responda exatamente "compila" ou "erro".
+new Funcionario("Ana", "111", "TI") | erro
+Funcionario h = new Horista("Ana", "111", "TI", 45.0) | compila
+class Vendedor extends Funcionario { private double comissao; } | erro
+abstract class Gerente extends Funcionario { } | compila
+Funcionario f = new Horista("Ana", "111", "TI", 45.0); Horista h = (Horista) f | compila
 ```
 
 ---
@@ -200,6 +255,19 @@ class RelatorioFuncionarios extends RelatorioPDF {
 ```
 
 O que `abstract` fez aqui: tornou impossível criar um relatório sem implementar o conteúdo. A estrutura é garantida pela superclasse; a variação é delegada às subclasses. Isso é `abstract` fazendo seu trabalho.
+
+### Atividade 4 — Papéis no Template Method
+
+```fill-table
+COL1:Papel no padrão Template Method
+COL2:Palavra-chave ou elemento Java
+LEGEND:Preencha com a palavra-chave ou elemento correto para cada papel. Respostas curtas — uma palavra ou nome de método.
+Impede que subclasses mudem a sequência de execução | final
+Exige que cada subclasse preencha um passo específico | abstract
+Método que define e executa o esqueleto da operação | gerar
+Passo variável que difere entre RelatorioVendas e RelatorioFuncionarios | imprimirConteudo
+Passos implementados uma vez na superclasse e herdados por todas | concretos
+```
 
 ---
 
@@ -307,6 +375,17 @@ public class DemoFormas {
         System.out.println("Maior forma: " + maior.getClass().getSimpleName()); // ex: "Circulo"
     }
 }
+```
+
+### Atividade 5 — É-UM ou TEM-UM?
+
+```is-a-has-a
+PAIR:Horista|Funcionario:heranca:Horista É-UM tipo de Funcionario — a subclasse concreta implementa o método abstrato calcularSalario()
+PAIR:Circulo|FormaGeometrica:heranca:Circulo É-UM tipo de FormaGeometrica — implementa calcularArea() e calcularPerimetro() obrigatoriamente
+PAIR:RelatorioVendas|RelatorioPDF:heranca:RelatorioVendas É-UM RelatorioPDF — estende a superclasse e implementa o passo abstrato imprimirConteudo()
+PAIR:DemoFormas|FormaGeometrica:composicao:DemoFormas TEM-UM array de FormaGeometrica — usa objetos da hierarquia sem herdar deles; isso é composição
+PAIR:ProcessadorCSV|ProcessadorArquivo:heranca:ProcessadorCSV É-UM ProcessadorArquivo — subclasse concreta que implementa os três passos abstratos do Template Method
+PAIR:FolhaDePagamento|Funcionario:composicao:FolhaDePagamento TEM MÚLTIPLOS Funcionario em um ArrayList — gerencia objetos da hierarquia, mas não faz parte dela
 ```
 
 ---
