@@ -45,3 +45,11 @@ export interface Vec2 {
   row: number
   col: number
 }
+
+export interface DmgEvent {
+  id: number
+  amount: number
+  positive: boolean
+  row: number
+  col: number
+}

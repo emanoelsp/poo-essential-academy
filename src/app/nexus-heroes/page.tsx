@@ -17,6 +17,7 @@ import type {
   LogType,
   GamePhase,
   Grid,
+  DmgEvent,
 } from './types'
 
 const GameCanvas = dynamic(() => import('./GameCanvas'), { ssr: false })
@@ -202,6 +203,21 @@ export default function NexusHeroesPage() {
   const logIdRef = useRef(0)
   const consoleRef = useRef<HTMLDivElement>(null)
 
+  const [heroHitAt, setHeroHitAt] = useState(0)
+  const [dmgEvents, setDmgEvents] = useState<DmgEvent[]>([])
+  const dmgIdRef = useRef(0)
+
+  const addDmg = useCallback((amount: number, positive: boolean, row: number, col: number) => {
+    setDmgEvents((prev) => [
+      ...prev,
+      { id: dmgIdRef.current++, amount, positive, row, col },
+    ])
+  }, [])
+
+  const removeDmg = useCallback((id: number) => {
+    setDmgEvents((prev) => prev.filter((e) => e.id !== id))
+  }, [])
+
   // ─── Logging ─────────────────────────────────────────────────────────────
 
   const addLog = useCallback((type: LogType, message: string) => {
@@ -338,31 +354,27 @@ export default function NexusHeroesPage() {
           break
         }
         case 'M': {
-          const capped = Math.min(next.mana + 25, next.maxMana)
-          addLog(
-            'invariante',
-            `setMana(${next.mana + 25}) chamado. Math.min(mana+25, ${next.maxMana}).`
-          )
+          const gained = Math.min(next.mana + 25, next.maxMana) - next.mana
+          const capped = next.mana + gained
+          addLog('invariante', `setMana(${next.mana + 25}) chamado. Math.min(mana+25, ${next.maxMana}).`)
+          setTimeout(() => addDmg(gained, true, row, col), 0)
           next = { ...next, mana: capped }
           clearCell(row, col)
           break
         }
         case 'H': {
-          const capped = Math.min(next.hp + 20, next.maxHp)
-          addLog(
-            'invariante',
-            `setVida(${next.hp + 20}) chamado. Math.min(hp+20, ${next.maxHp}).`
-          )
+          const healed = Math.min(next.hp + 20, next.maxHp) - next.hp
+          const capped = next.hp + healed
+          addLog('invariante', `setVida(${next.hp + 20}) chamado. Math.min(hp+20, ${next.maxHp}).`)
+          setTimeout(() => addDmg(healed, true, row, col), 0)
           next = { ...next, hp: capped }
           clearCell(row, col)
           break
         }
         case 'T': {
           const newHp = Math.max(next.hp - 20, 0)
-          addLog(
-            'excecao',
-            `TrapDamageException lançada! setVida(${next.hp - 20}) → Math.max(hp-20, 0). HP: ${newHp}.`
-          )
+          addLog('excecao', `TrapDamageException lançada! setVida(${next.hp - 20}) → Math.max(hp-20, 0). HP: ${newHp}.`)
+          setTimeout(() => { setHeroHitAt(Date.now()); addDmg(20, false, row, col) }, 0)
           next = { ...next, hp: newHp }
           clearCell(row, col)
           if (newHp <= 0) setTimeout(() => setPhase('defeat'), 0)
@@ -381,7 +393,7 @@ export default function NexusHeroesPage() {
       }
       return next
     },
-    [grid, applyXp, addLog, clearCell]
+    [grid, applyXp, addLog, clearCell, addDmg]
   )
 
   // ─── Movement ──────────────────────────────────────────────────────────────
@@ -411,12 +423,13 @@ export default function NexusHeroesPage() {
           next = { ...next, hp: Math.max(next.hp - chip, 0) }
           const name = e.tier === 2 ? 'Golem' : 'Goblin'
           addLog('excecao', `AmeaçaPassiva! ${name} adjacente causou ${chip} de dano. setVida() validou: hp >= 0.`)
+          setTimeout(() => { setHeroHitAt(Date.now()); addDmg(chip, false, next.row, next.col) }, 0)
         }
         if (next.hp <= 0) setTimeout(() => setPhase('defeat'), 0)
         return next
       })
     },
-    [phase, grid, enemies, collectCell, addLog]
+    [phase, grid, enemies, collectCell, addLog, addDmg]
   )
 
   // ─── Combat: sword ─────────────────────────────────────────────────────────
@@ -435,10 +448,12 @@ export default function NexusHeroesPage() {
         `@Override ${h.name}.atacarComEspada(inimigo) → dano ${dmg}. Inimigo HP: ${remaining}.`
       )
 
-      const enemyName = target.tier === 2 ? 'Golem' : 'Goblin'
-      const xpReward  = target.tier === 2 ? 30 : 15
+      const enemyName  = target.tier === 2 ? 'Golem' : 'Goblin'
+      const xpReward   = target.tier === 2 ? 30 : 15
       const coinReward = target.tier === 2 ? 20 : 10
       let next: HeroState = { ...h }
+
+      setTimeout(() => addDmg(dmg, false, target.row, target.col), 0)
 
       if (remaining <= 0) {
         setEnemies((es) =>
@@ -454,12 +469,13 @@ export default function NexusHeroesPage() {
         const counterDmg = target.atk
         const newHp = Math.max(next.hp - counterDmg, 0)
         addLog('excecao', `AtaqueRecebidoException! ${enemyName} contra-atacou. −${counterDmg} HP. setVida() validou: hp >= 0.`)
+        setTimeout(() => { setHeroHitAt(Date.now()); addDmg(counterDmg, false, h.row, h.col) }, 0)
         next = { ...next, hp: newHp }
         if (newHp <= 0) setTimeout(() => setPhase('defeat'), 0)
       }
       return next
     })
-  }, [phase, adjacentEnemies, applyXp, addLog])
+  }, [phase, adjacentEnemies, applyXp, addLog, addDmg])
 
   // ─── Combat: magic ─────────────────────────────────────────────────────────
 
@@ -489,6 +505,7 @@ export default function NexusHeroesPage() {
       if (targets.length > 0) {
         const targetIds = new Set(targets.map((t) => t.id))
         let defeated = 0
+        targets.forEach((t) => setTimeout(() => addDmg(next.matk, false, t.row, t.col), 0))
         setEnemies((es) =>
           es.map((e) => {
             if (!targetIds.has(e.id)) return e
@@ -508,14 +525,11 @@ export default function NexusHeroesPage() {
           addLog('instanciacao', `${defeated} inimigo(s) derrotado(s). new Item("HeroCoin") instanciado.`)
         }
       } else {
-        addLog(
-          'info',
-          'Magia conjurada, mas nenhum inimigo adjacente foi atingido.'
-        )
+        addLog('info', 'Magia conjurada, mas nenhum inimigo adjacente foi atingido.')
       }
       return next
     })
-  }, [phase, adjacentEnemies, applyXp, addLog])
+  }, [phase, adjacentEnemies, applyXp, addLog, addDmg])
 
   // ─── Attack dispatcher (class-specific) ────────────────────────────────────
 
@@ -714,6 +728,9 @@ export default function NexusHeroesPage() {
           heroRow={hero.row}
           heroCol={hero.col}
           enemies={enemies}
+          heroHitAt={heroHitAt}
+          dmgEvents={dmgEvents}
+          onDmgEventDone={removeDmg}
         />
 
         {/* Combat button overlay — single button, class-specific */}
