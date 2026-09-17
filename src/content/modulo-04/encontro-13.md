@@ -4,6 +4,22 @@
 
 ---
 
+### Atividade — Aquecimento: revise o Encontro 12
+
+```fill-table
+COL1:Situação ou regra
+COL2:Palavra-chave ou resposta curta
+LEGEND:Garanta que o E12 está sólido antes de avançar. Clique fora de cada campo para verificar.
+Quando você escreve new Horista(...), o primeiro construtor a executar é o de... | Object
+Instrução obrigatória como primeira linha do construtor da subclasse | super()
+Para executar o método da superclasse dentro de um @Override, usamos | super.método()
+Declarar um campo com o mesmo nome na subclasse que na superclasse se chama | shadowing
+Palavra-chave que impede que um método seja sobrescrito por subclasses | final
+Métodos static não são sobrescritos — esse comportamento se chama | method hiding
+```
+
+---
+
 ## 1. O problema do método genérico vazio
 
 Voltando à hierarquia de Funcionário do Encontro 11, temos um problema:
