@@ -21,40 +21,56 @@ import type {
 
 const GameCanvas = dynamic(() => import('./GameCanvas'), { ssr: false })
 
-// ─── Base maze (15x15) ─────────────────────────────────────────────────────────
+// ─── Base maze (19x19) ─────────────────────────────────────────────────────────
 
 const BASE_MAZE: string[] = [
-  'WWWWWWWWWWWWWWW',
-  'W___W___W__M_PW',
-  'W_W_W_W_W_WWW_W',
-  'W_W___W___W___W',
-  'W_WWW_WWWWW_WWW',
-  'W___W_____W_W_W',
-  'WWW_WWWW_WW_W_W',
-  'W_____W_____W_W',
-  'W_WWWWWWW_WWW_W',
-  'W_W_____W_W___W',
-  'W_W_WWW_W_W_WWW',
-  'W___W_____W_W_W',
-  'WWW_W_WWWWW_W_W',
-  'WC___W_E_____TW',
-  'WWWWWWWWWWWWWWW',
+  'WWWWWWWWWWWWWWWWWWW', // 0
+  'W_____W_____W___MPW', // 1  M@16  P@17
+  'W_WWW_W_WWW_W_WWW_W', // 2
+  'W_W___W_W___W_W___W', // 3
+  'W_W_WWW_W_WWW_W_WWW', // 4
+  'W___W___W_W___W___W', // 5
+  'WWW_W_WWW_W_WWWWW_W', // 6
+  'W___W___W___W_____W', // 7
+  'W_WWWWW_WWWWW_WWW_W', // 8
+  'W_W_____W_____W___W', // 9
+  'W_W_WWW_W_W_W_W_W_W', // 10
+  'W___W___W_W___W_W_W', // 11
+  'WWWWW_WWW_W_WWWWW_W', // 12
+  'W_____W___W___W___W', // 13
+  'W_WWWWW_WWWWW_W_WWW', // 14
+  'W_W_____W_____W___W', // 15
+  'W_W_WWW_W_WWWWWWW_W', // 16
+  'W______W_________TW', // 17  T@17
+  'WWWWWWWWWWWWWWWWWWW', // 18
 ]
 
-// Extra scattered elements (row, col, type). Only placed on '_' cells.
-const EXTRAS: Array<{ row: number; col: number; type: CellType }> = [
-  { row: 3, col: 3, type: 'M' },
-  { row: 9, col: 12, type: 'M' },
-  { row: 11, col: 5, type: 'M' },
-  { row: 5, col: 1, type: 'H' },
-  { row: 7, col: 10, type: 'H' },
-  { row: 1, col: 5, type: 'T' },
-  { row: 9, col: 3, type: 'T' },
-  { row: 3, col: 11, type: 'E' },
-  { row: 11, col: 9, type: 'E' },
+// Fixed items (no enemies — enemies placed randomly per run)
+const ITEMS: Array<{ row: number; col: number; type: CellType }> = [
+  { row: 3,  col: 3,  type: 'M' },
+  { row: 9,  col: 11, type: 'M' },
+  { row: 11, col: 11, type: 'M' },
+  { row: 5,  col: 15, type: 'M' },
+  { row: 5,  col: 1,  type: 'H' },
+  { row: 7,  col: 10, type: 'H' },
+  { row: 15, col: 13, type: 'H' },
+  { row: 13, col: 8,  type: 'C' },
+  { row: 7,  col: 16, type: 'C' },
+  { row: 1,  col: 5,  type: 'T' },
+  { row: 9,  col: 3,  type: 'T' },
+  { row: 15, col: 5,  type: 'T' },
 ]
 
-const HERO_START = { row: 13, col: 1 }
+// Candidate pools for random enemy placement — verified on '_' cells
+const GOBLIN_POOL: Array<[number, number]> = [
+  [3,3],[5,11],[7,13],[9,5],[11,3],[13,9],[7,3],[11,11],
+  [3,15],[5,7],[9,15],[13,3],[15,3],[15,15],[7,1],[11,15],
+]
+const GOLEM_POOL: Array<[number, number]> = [
+  [3,11],[5,15],[9,15],[11,17],[13,15],[7,16],[1,11],[3,15],
+]
+
+const HERO_START = { row: 17, col: 1 }
 
 // ─── Stat presets ──────────────────────────────────────────────────────────────
 
@@ -72,39 +88,64 @@ const PRESETS: Record<HeroClass, HeroPreset> = {
   mago: { hp: 80, maxHp: 80, mana: 120, maxMana: 120, atk: 15, matk: 40 },
 }
 
-const ENEMY_HP = 30
-const ENEMY_ATK = 12
+const GOBLIN_HP  = 45
+const GOBLIN_ATK = 8
+const GOLEM_HP   = 95
+const GOLEM_ATK  = 18
 const MAGIC_COST = 20
 
 // ─── Grid builder ────────────────────────────────────────────────────────────
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 function buildGrid(): { grid: Grid; enemies: EnemyState[] } {
   const grid: Grid = BASE_MAZE.map((row) => row.split('') as CellType[])
-  for (const ex of EXTRAS) {
-    if (grid[ex.row] && grid[ex.row][ex.col] === '_') {
-      grid[ex.row][ex.col] = ex.type
-    }
+
+  // Place fixed items
+  for (const it of ITEMS) {
+    if (grid[it.row]?.[it.col] === '_') grid[it.row][it.col] = it.type
   }
-  // The hero spawns on the start cell; make sure nothing (e.g. a chest)
-  // sits underneath it so the spawn tile is plain floor.
+
   grid[HERO_START.row][HERO_START.col] = '_'
+
+  // Place enemies randomly — pick 5 goblins and 2 golems each run
   const enemies: EnemyState[] = []
   let id = 0
-  for (let r = 0; r < grid.length; r++) {
-    for (let c = 0; c < grid[r].length; c++) {
-      if (grid[r][c] === 'E') {
-        enemies.push({
-          id: id++,
-          row: r,
-          col: c,
-          hp: ENEMY_HP,
-          atk: ENEMY_ATK,
-          alive: true,
-        })
-        grid[r][c] = '_'
-      }
+
+  const occupied = new Set<string>()
+  const place = (pool: Array<[number, number]>, count: number, tier: 1 | 2) => {
+    let placed = 0
+    for (const [r, c] of shuffle(pool)) {
+      if (placed >= count) break
+      const key = `${r},${c}`
+      if (occupied.has(key)) continue
+      if (grid[r]?.[c] !== '_') continue
+      // Keep enemies away from hero start
+      if (Math.abs(r - HERO_START.row) + Math.abs(c - HERO_START.col) < 4) continue
+      occupied.add(key)
+      enemies.push({
+        id: id++,
+        row: r, col: c,
+        hp: tier === 1 ? GOBLIN_HP : GOLEM_HP,
+        maxHp: tier === 1 ? GOBLIN_HP : GOLEM_HP,
+        atk: tier === 1 ? GOBLIN_ATK : GOLEM_ATK,
+        alive: true,
+        tier,
+      })
+      placed++
     }
   }
+
+  place(GOBLIN_POOL, 5, 1)
+  place(GOLEM_POOL, 2, 2)
+
   return { grid, enemies }
 }
 
@@ -352,24 +393,27 @@ export default function NexusHeroesPage() {
         if (!h) return h
         const nRow = h.row + dRow
         const nCol = h.col + dCol
-        if (
-          nRow < 0 ||
-          nRow >= grid.length ||
-          nCol < 0 ||
-          nCol >= grid[0].length
-        ) {
-          return h
-        }
+        if (nRow < 0 || nRow >= grid.length || nCol < 0 || nCol >= grid[0].length) return h
         if (grid[nRow][nCol] === 'W') return h
         if (enemies.some((e) => e.alive && e.row === nRow && e.col === nCol)) {
-          addLog(
-            'info',
-            'Caminho bloqueado por um inimigo. Ataque-o antes de avançar.'
-          )
+          addLog('info', 'Caminho bloqueado por um inimigo. Ataque-o antes de avançar.')
           return h
         }
         const moved = { ...h, passos: h.passos + 1 }
-        return collectCell(moved, nRow, nCol)
+        let next = collectCell(moved, nRow, nCol)
+
+        // Passive threat — adjacent enemies deal chip damage each step
+        const adj = enemies.filter(
+          (e) => e.alive && Math.abs(e.row - next.row) + Math.abs(e.col - next.col) === 1
+        )
+        for (const e of adj) {
+          const chip = Math.max(1, Math.floor(e.atk * 0.35))
+          next = { ...next, hp: Math.max(next.hp - chip, 0) }
+          const name = e.tier === 2 ? 'Golem' : 'Goblin'
+          addLog('excecao', `AmeaçaPassiva! ${name} adjacente causou ${chip} de dano. setVida() validou: hp >= 0.`)
+        }
+        if (next.hp <= 0) setTimeout(() => setPhase('defeat'), 0)
+        return next
       })
     },
     [phase, grid, enemies, collectCell, addLog]
@@ -391,29 +435,25 @@ export default function NexusHeroesPage() {
         `@Override ${h.name}.atacarComEspada(inimigo) → dano ${dmg}. Inimigo HP: ${remaining}.`
       )
 
+      const enemyName = target.tier === 2 ? 'Golem' : 'Goblin'
+      const xpReward  = target.tier === 2 ? 30 : 15
+      const coinReward = target.tier === 2 ? 20 : 10
       let next: HeroState = { ...h }
 
       if (remaining <= 0) {
         setEnemies((es) =>
-          es.map((e) =>
-            e.id === target.id ? { ...e, hp: 0, alive: false } : e
-          )
+          es.map((e) => e.id === target.id ? { ...e, hp: 0, alive: false } : e)
         )
-        next = applyXp(next, 15)
-        next = { ...next, coins: next.coins + 10 }
-        addLog(
-          'instanciacao',
-          `new Item("HeroCoin", 10) instanciado. Inimigo derrotado por ${h.name}.`
-        )
+        next = applyXp(next, xpReward)
+        next = { ...next, coins: next.coins + coinReward }
+        addLog('instanciacao', `${enemyName} derrotado! new Item("HeroCoin", ${coinReward}) instanciado.`)
       } else {
         setEnemies((es) =>
-          es.map((e) => (e.id === target.id ? { ...e, hp: remaining } : e))
+          es.map((e) => e.id === target.id ? { ...e, hp: remaining } : e)
         )
-        const newHp = Math.max(next.hp - ENEMY_ATK, 0)
-        addLog(
-          'excecao',
-          `AtaqueRecebidoException! HP reduzido em ${ENEMY_ATK}. setVida() validou: hp >= 0.`
-        )
+        const counterDmg = target.atk
+        const newHp = Math.max(next.hp - counterDmg, 0)
+        addLog('excecao', `AtaqueRecebidoException! ${enemyName} contra-atacou. −${counterDmg} HP. setVida() validou: hp >= 0.`)
         next = { ...next, hp: newHp }
         if (newHp <= 0) setTimeout(() => setPhase('defeat'), 0)
       }
@@ -461,12 +501,11 @@ export default function NexusHeroesPage() {
           })
         )
         if (defeated > 0) {
-          next = applyXp(next, 15 * defeated)
-          next = { ...next, coins: next.coins + 10 * defeated }
-          addLog(
-            'instanciacao',
-            `${defeated} inimigo(s) derrotado(s). new Item("HeroCoin", ${10 * defeated}) instanciado.`
-          )
+          const totalXp    = targets.filter(t => t.hp - next.matk <= 0).reduce((s,t) => s + (t.tier===2?30:15), 0)
+          const totalCoins = targets.filter(t => t.hp - next.matk <= 0).reduce((s,t) => s + (t.tier===2?20:10), 0)
+          next = applyXp(next, totalXp || 15 * defeated)
+          next = { ...next, coins: next.coins + (totalCoins || 10 * defeated) }
+          addLog('instanciacao', `${defeated} inimigo(s) derrotado(s). new Item("HeroCoin") instanciado.`)
         }
       } else {
         addLog(
@@ -486,34 +525,26 @@ export default function NexusHeroesPage() {
     else castMagic()
   }, [hero, attackWithSword, castMagic])
 
-  // ─── Keyboard controls ─────────────────────────────────────────────────────
+  // ─── Keyboard controls (throttled for smooth feel) ─────────────────────────
+
+  const moveThrottleRef = useRef(0)
 
   useEffect(() => {
     if (phase !== 'playing') return
     const onKey = (e: KeyboardEvent) => {
+      const isArrow = e.key.startsWith('Arrow')
+      if (isArrow) {
+        const now = performance.now()
+        if (now - moveThrottleRef.current < 140) return
+        moveThrottleRef.current = now
+      }
       switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault()
-          move(-1, 0)
-          break
-        case 'ArrowDown':
-          e.preventDefault()
-          move(1, 0)
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          move(0, -1)
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          move(0, 1)
-          break
-        case ' ':
-          e.preventDefault()
-          handleAttack()
-          break
-        default:
-          break
+        case 'ArrowUp':    e.preventDefault(); move(-1, 0); break
+        case 'ArrowDown':  e.preventDefault(); move(1, 0);  break
+        case 'ArrowLeft':  e.preventDefault(); move(0, -1); break
+        case 'ArrowRight': e.preventDefault(); move(0, 1);  break
+        case ' ':          e.preventDefault(); handleAttack(); break
+        default: break
       }
     }
     window.addEventListener('keydown', onKey)
@@ -675,8 +706,8 @@ export default function NexusHeroesPage() {
 
   return (
     <div className="flex h-screen w-full flex-col bg-slate-950 text-slate-100 lg:flex-row">
-      {/* 3D canvas ~65% */}
-      <div className="relative h-[55vh] w-full lg:h-full lg:w-[65%]">
+      {/* 3D canvas ~72% */}
+      <div className="relative h-[60vh] w-full lg:h-full lg:w-[72%]">
         <GameCanvas
           grid={grid}
           heroClass={hero.class}
@@ -724,8 +755,8 @@ export default function NexusHeroesPage() {
         </div>
       </div>
 
-      {/* Side panel ~35% */}
-      <aside className="flex h-[45vh] w-full flex-col border-l border-slate-800 bg-slate-900 lg:h-full lg:w-[35%]">
+      {/* Side panel ~28% */}
+      <aside className="flex h-[40vh] w-full flex-col border-l border-slate-800 bg-slate-900 lg:h-full lg:w-[28%]">
         {/* HUD */}
         <div className="border-b border-slate-800 p-4">
           <div className="mb-3 flex items-center gap-2 text-lg font-bold">

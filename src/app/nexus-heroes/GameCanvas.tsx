@@ -191,65 +191,117 @@ function HeroMesh({ heroClass, row, col }: { heroClass: HeroClass; row: number; 
 
 // ─── Enemy ───────────────────────────────────────────────────────────────────
 
+// ─── Goblin (tier 1 — 2 hits) ────────────────────────────────────────────────
+function GoblinMesh() {
+  return (
+    <>
+      <mesh castShadow position={[-0.1, -0.06, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.28, 8]} />
+        <meshStandardMaterial color="#4a6b00" />
+      </mesh>
+      <mesh castShadow position={[0.1, -0.06, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.28, 8]} />
+        <meshStandardMaterial color="#4a6b00" />
+      </mesh>
+      <mesh castShadow position={[0, 0.32, 0]}>
+        <boxGeometry args={[0.44, 0.52, 0.34]} />
+        <meshStandardMaterial color="#5a8000" roughness={0.8} />
+      </mesh>
+      <mesh castShadow position={[0, 0.78, 0]}>
+        <sphereGeometry args={[0.2, 14, 14]} />
+        <meshStandardMaterial color="#3d6600" roughness={0.7} />
+      </mesh>
+      {/* Big ears */}
+      <mesh castShadow position={[-0.22, 0.8, 0]} rotation={[0, 0, 0.5]}>
+        <coneGeometry args={[0.08, 0.28, 6]} />
+        <meshStandardMaterial color="#3d6600" />
+      </mesh>
+      <mesh castShadow position={[0.22, 0.8, 0]} rotation={[0, 0, -0.5]}>
+        <coneGeometry args={[0.08, 0.28, 6]} />
+        <meshStandardMaterial color="#3d6600" />
+      </mesh>
+      {/* Eyes — glowing red */}
+      <mesh position={[0.07, 0.8, 0.18]}>
+        <sphereGeometry args={[0.04, 8, 8]} />
+        <meshStandardMaterial color="#ff4444" emissive="#ff0000" emissiveIntensity={4} />
+      </mesh>
+      <mesh position={[-0.07, 0.8, 0.18]}>
+        <sphereGeometry args={[0.04, 8, 8]} />
+        <meshStandardMaterial color="#ff4444" emissive="#ff0000" emissiveIntensity={4} />
+      </mesh>
+      <pointLight position={[0, 0.8, 0.2]} color="#ff2200" intensity={0.35} distance={1.8} />
+    </>
+  )
+}
+
+// ─── Golem (tier 2 — 4 hits) ─────────────────────────────────────────────────
+function GolemMesh() {
+  return (
+    <>
+      {/* Thick legs */}
+      <mesh castShadow position={[-0.2, -0.08, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.42, 8]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.9} />
+      </mesh>
+      <mesh castShadow position={[0.2, -0.08, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.42, 8]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.9} />
+      </mesh>
+      {/* Massive body */}
+      <mesh castShadow position={[0, 0.52, 0]}>
+        <boxGeometry args={[0.85, 0.82, 0.65]} />
+        <meshStandardMaterial color="#1c1c1c" roughness={0.95} />
+      </mesh>
+      {/* Stone cracks / markings */}
+      <mesh position={[0, 0.52, 0.33]}>
+        <boxGeometry args={[0.6, 0.55, 0.02]} />
+        <meshStandardMaterial color="#3a0000" emissive="#6b0000" emissiveIntensity={0.8} />
+      </mesh>
+      {/* Boulder head */}
+      <mesh castShadow position={[0, 1.12, 0]}>
+        <sphereGeometry args={[0.32, 14, 14]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.95} />
+      </mesh>
+      {/* Massive horns */}
+      <mesh castShadow position={[-0.24, 1.36, 0]} rotation={[0, 0, -0.7]}>
+        <coneGeometry args={[0.09, 0.46, 7]} />
+        <meshStandardMaterial color="#111111" />
+      </mesh>
+      <mesh castShadow position={[0.24, 1.36, 0]} rotation={[0, 0, 0.7]}>
+        <coneGeometry args={[0.09, 0.46, 7]} />
+        <meshStandardMaterial color="#111111" />
+      </mesh>
+      {/* Eyes — glowing orange */}
+      <mesh position={[0.1, 1.14, 0.28]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshStandardMaterial color="#ff6600" emissive="#ff4400" emissiveIntensity={5} />
+      </mesh>
+      <mesh position={[-0.1, 1.14, 0.28]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshStandardMaterial color="#ff6600" emissive="#ff4400" emissiveIntensity={5} />
+      </mesh>
+      <pointLight position={[0, 1.1, 0.3]} color="#ff4400" intensity={0.7} distance={3} />
+    </>
+  )
+}
+
 function EnemyMesh({ enemy }: { enemy: EnemyState }) {
   const groupRef = useRef<THREE.Group>(null)
   const [x, z] = gridToWorld(enemy.row, enemy.col)
+  const speed = enemy.tier === 1 ? 1.2 : 0.5
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    groupRef.current.rotation.y += delta * 0.7
+    groupRef.current.rotation.y += delta * speed
   })
 
   if (!enemy.alive) return null
 
+  const scale = enemy.tier === 2 ? 1.35 : 1.0
+
   return (
-    <group ref={groupRef} position={[x, 0.5, z]}>
-      {/* Legs */}
-      <mesh castShadow position={[-0.12, -0.08, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.32, 8]} />
-        <meshStandardMaterial color="#6b0000" />
-      </mesh>
-      <mesh castShadow position={[0.12, -0.08, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.32, 8]} />
-        <meshStandardMaterial color="#6b0000" />
-      </mesh>
-      {/* Body */}
-      <mesh castShadow position={[0, 0.38, 0]}>
-        <boxGeometry args={[0.56, 0.64, 0.4]} />
-        <meshStandardMaterial color="#8b0000" roughness={0.7} />
-      </mesh>
-      {/* Spikes on back */}
-      {([-0.2, 0, 0.2] as number[]).map((ox, i) => (
-        <mesh key={i} castShadow position={[ox, 0.55, -0.26]} rotation={[0.5, 0, 0]}>
-          <coneGeometry args={[0.05, 0.28, 6]} />
-          <meshStandardMaterial color="#4a0000" />
-        </mesh>
-      ))}
-      {/* Head */}
-      <mesh castShadow position={[0, 0.88, 0]}>
-        <sphereGeometry args={[0.24, 16, 16]} />
-        <meshStandardMaterial color="#5a0000" roughness={0.6} />
-      </mesh>
-      {/* Horns */}
-      <mesh castShadow position={[-0.16, 1.1, 0]} rotation={[0, 0, -0.5]}>
-        <coneGeometry args={[0.06, 0.3, 6]} />
-        <meshStandardMaterial color="#3a0000" />
-      </mesh>
-      <mesh castShadow position={[0.16, 1.1, 0]} rotation={[0, 0, 0.5]}>
-        <coneGeometry args={[0.06, 0.3, 6]} />
-        <meshStandardMaterial color="#3a0000" />
-      </mesh>
-      {/* Eyes — glowing yellow */}
-      <mesh position={[0.09, 0.9, 0.2]}>
-        <sphereGeometry args={[0.05, 8, 8]} />
-        <meshStandardMaterial color="#ffee44" emissive="#ffcc00" emissiveIntensity={4} />
-      </mesh>
-      <mesh position={[-0.09, 0.9, 0.2]}>
-        <sphereGeometry args={[0.05, 8, 8]} />
-        <meshStandardMaterial color="#ffee44" emissive="#ffcc00" emissiveIntensity={4} />
-      </mesh>
-      {/* Eye glow */}
-      <pointLight position={[0, 0.9, 0.2]} color="#ff8800" intensity={0.4} distance={2} />
+    <group ref={groupRef} position={[x, 0.5, z]} scale={[scale, scale, scale]}>
+      {enemy.tier === 1 ? <GoblinMesh /> : <GolemMesh />}
     </group>
   )
 }

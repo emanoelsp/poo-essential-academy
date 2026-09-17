@@ -27,8 +27,10 @@ export interface EnemyState {
   row: number
   col: number
   hp: number
+  maxHp: number
   atk: number
   alive: boolean
+  tier: 1 | 2
 }
 
 export interface LogEntry {
