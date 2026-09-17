@@ -8,6 +8,31 @@ Nexus Heroes é um jogo de arena onde seu herói percorre um mapa coletando iten
 
 **O jogo não entrega o código Java — ele mostra o comportamento. Você escreve o código.**
 
+---
+
+## Como jogar
+
+1. Clique em **Entrar na Arena** abaixo para abrir o jogo
+2. Escolha seu herói — **Guerreiro** (mais HP, menos Mana) ou **Mago** (menos HP, muito mais Mana)
+3. Digite o nome do seu personagem e clique em **Iniciar Jogo**
+4. Mova o herói pelo mapa usando as **setas do teclado** ou o **D-Pad** na lateral
+5. Fique atento ao **System Console** — cada evento exibe uma mensagem com o conceito POO relacionado
+6. Tente alcançar o portal 🌀 para completar a fase
+
+**Elementos do mapa:**
+
+| Ícone | Elemento | O que acontece | Conceito POO |
+|-------|----------|----------------|--------------|
+| 📦 | Baú | Ganha XP | Instanciação (`new`) |
+| 💎 | Cristal de Mana | +15 Mana | Invariante de `setMana()` |
+| 🍀 | Orbe de Vida | +20 HP | Invariante de `setVida()` |
+| ⚠️ | Armadilha | -15 HP | Exceção lançada |
+| 👾 | Inimigo | Combate, -10 HP | `@Override calcularDano()` |
+| 🧱 | Parede | Impassável | — |
+| 🌀 | Portal | Fase completa! | — |
+
+> **Dica:** leia cada mensagem do console com atenção — elas revelam os nomes dos métodos, os parâmetros e as regras de validação que você vai precisar implementar em Java.
+
 ```game-launch
 URL: /nexus-heroes
 TITLE: Iniciar sua Jornada — Nexus Heroes
@@ -19,7 +44,7 @@ BUTTON: 🎮 Entrar na Arena
 
 ## Antes de programar: documente o que você viu
 
-Jogue pelo menos uma partida completa até o portal. Depois responda — **sem consultar nenhuma fonte externa** — com base apenas no que o console mostrou:
+Jogue pelo menos uma partida completa até o portal. Depois responda — **com base apenas no que o console mostrou**:
 
 **1. Sobre a criação do herói:**
 Quando você escolheu o herói, o console exibiu uma mensagem de `[INSTANCIAÇÃO]`. O que ela revela sobre o construtor? Quais parâmetros foram passados? Qual classe foi chamada antes do construtor do herói?
