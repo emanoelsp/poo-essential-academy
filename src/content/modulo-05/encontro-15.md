@@ -519,6 +519,62 @@ Requisitos:
 
 **Critério de revisão:** seu código demonstra OCP? Cada subtipo pode substituir `Entrega` sem surpresa? Onde está a responsabilidade de calcular cada regra?
 
+### Oficina de projeto — prove que o processador está protegido
+
+Agora faça uma segunda leitura do seu próprio código, desta vez como alguém que vai receber uma mudança de requisito amanhã. A oficina tem três rodadas; não pule a primeira só porque o resultado final parece óbvio.
+
+#### Rodada 1 — registre o contrato
+
+Antes de criar as subclasses, escreva em uma frase o que qualquer `Entrega` promete. Uma boa resposta deve ser verificável pelo cliente:
+
+> “Toda `Entrega` possui um destino válido e consegue informar um frete não negativo por meio de `calcularFrete()`.”
+
+Transforme essa frase em decisões de código:
+
+- quais dados são responsabilidade da classe abstrata;
+- qual método é comum ao processador;
+- quais regras ficam exclusivamente em cada subtipo;
+- quais entradas devem ser rejeitadas pelo construtor.
+
+#### Rodada 2 — simule a mudança
+
+Depois que `totalizar(List<Entrega>)` estiver funcionando, adicione `EntregaInternacional` com uma taxa própria. Faça uma cópia do processador antes da alteração e compare os arquivos:
+
+```java
+class EntregaInternacional extends Entrega {
+    private final double taxaAlfandega;
+
+    public EntregaInternacional(String destino, double distanciaKm,
+                                double taxaAlfandega) {
+        super(destino, distanciaKm);
+        if (taxaAlfandega < 0) {
+            throw new IllegalArgumentException("Taxa inválida");
+        }
+        this.taxaAlfandega = taxaAlfandega;
+    }
+
+    @Override
+    public double calcularFrete() {
+        return getDistanciaKm() * 4.50 + taxaAlfandega;
+    }
+}
+```
+
+Se você precisou editar o totalizador, registre exatamente por quê. Às vezes a alteração revela que o contrato está incompleto; às vezes revela apenas que o processador conhecia detalhes demais.
+
+#### Rodada 3 — faça o teste do cliente
+
+Responda por escrito:
+
+1. O cliente consegue usar `EntregaInternacional` onde esperava `Entrega`?
+2. Algum subtipo exige uma pré-condição mais rígida do que `Entrega`?
+3. O totalizador conhece alguma classe concreta?
+4. Qual linha evidencia o despacho dinâmico?
+
+**Definição de pronto:** a solução só está concluída quando o novo tipo funciona, o totalizador permanece igual e você consegue apontar o contrato que tornou isso possível. Essa evidência vale mais do que apenas “o programa executou sem erro”.
+
+> **Ponte para o Encontro 16:** se todas as entregas podem ser calculadas pela mesma operação, o polimorfismo resolve. Quando uma rotina precisa de uma capacidade que não pertence a todas as entregas, será necessário identificar um tipo — ou repensar o contrato. A próxima aula ensina a fazer essa escolha com segurança.
+
 ### Exercício 3 — Auditoria de contratos: encontre as violações
 
 O código a seguir contém três decisões de design que quebram contratos. Use o laboratório interativo para classificar cada uma e, depois, proponha uma correção em uma frase.

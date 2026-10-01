@@ -387,6 +387,46 @@ Adicionar WhatsApp exige editar vários processadores por tipo | revisar abstra�
 
 ---
 
+## 7. Trilha de decisão: qual ferramenta usar?
+
+A técnica mais importante deste encontro não é escrever um cast; é escolher se um cast deveria existir. Use a seguinte ordem de perguntas antes de identificar um tipo:
+
+| Pergunta | Melhor primeira opção | Por quê? |
+|---|---|---|
+| Todos os subtipos precisam responder à mesma operação? | **Polimorfismo** | O contrato geral concentra a chamada e cada objeto fornece sua implementação. |
+| Vários tipos diferentes compartilham uma capacidade transversal? | **Interface** | A capacidade pode ser expressa sem forçar todos os objetos a pertencerem à mesma hierarquia. |
+| Uma rotina pontual precisa agir somente sobre um subtipo? | **`instanceof` localizado** | A exceção fica visível e limitada ao lugar que realmente precisa dela. |
+| O mesmo teste aparece em vários serviços? | **Revisar a abstração** | A regra provavelmente está espalhada ou faltando em um contrato. |
+
+### Um detalhe que muda o resultado: `instanceof` versus `getClass()`
+
+As duas expressões não significam a mesma coisa:
+
+```java
+funcionario instanceof Horista          // aceita Horista e subclasses de Horista
+funcionario.getClass() == Horista.class // exige exatamente Horista
+```
+
+Para a maioria das regras de negócio, a primeira pergunta é a correta: “este objeto oferece a capacidade de um `Horista`?”. A comparação exata com `getClass()` deve ser rara e intencional. Além disso, `getClass()` lança `NullPointerException` quando a referência é `null`, enquanto `instanceof` retorna `false`.
+
+### Atividade interativa: escolha a primeira ferramenta
+
+Não escolha pela sintaxe mais curta; escolha pelo contrato que a rotina precisa preservar.
+
+```fill-table
+COL1: Situação
+COL2: Primeira ferramenta
+LEGEND: Responda com polimorfismo, interface, instanceof localizado ou revisar abstração.
+Calcular o salário de qualquer Funcionario | polimorfismo
+Marcar objetos que podem ser exportados para PDF, mesmo em hierarquias diferentes | interface
+Registrar horas apenas no fechamento mensal de uma folha | instanceof localizado
+Quatro classes repetem o mesmo if (objeto instanceof Tipo) | revisar abstração
+Verificar se o objeto é Horista ou uma especialização de Horista | instanceof localizado
+Verificar se o objeto é exatamente Horista, excluindo subclasses | instanceof localizado
+```
+
+> **Conexão com o Encontro 17:** interfaces serão a forma explícita de modelar capacidades como “pode exportar”, “pode autenticar” ou “pode ser tributado”. Hoje você já consegue reconhecer o sintoma; no próximo encontro vai aprender a expressar o contrato.
+
 ## Laboratório prático
 
 Faça os exercícios em ordem. Cada um retoma a decisão anterior e aumenta apenas uma dificuldade por vez.
