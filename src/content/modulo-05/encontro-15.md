@@ -4,367 +4,506 @@
 
 ---
 
-## 1. O problema que o Polimorfismo resolve
+## A missão da aula
 
-Voltando à `FolhaDePagamento` do TP2: para calcular o total da folha, ainda precisamos saber o tipo exato de cada funcionário:
+Imagine que a equipe de uma plataforma de pagamentos recebeu uma nova regra: além de cartão e boleto, o sistema agora precisa calcular pagamentos por Pix. O código atual funciona, mas toda vez que surge um novo tipo alguém precisa abrir o mesmo `if/else` e alterar uma parte delicada do sistema.
 
-```java
-// SEM polimorfismo — código explosivo
-double totalFolha = 0;
-for (int i = 0; i < total; i++) {
-    if (funcionarios[i] instanceof Horista) {
-        totalFolha += ((Horista) funcionarios[i]).calcularSalario();
-    } else if (funcionarios[i] instanceof Assalariado) {
-        totalFolha += ((Assalariado) funcionarios[i]).calcularSalario();
-    } else if (funcionarios[i] instanceof Comissionado) {
-        totalFolha += ((Comissionado) funcionarios[i]).calcularSalario();
-    }
-    // Adicionar novo tipo = modificar este código!
-}
-```
+Hoje você vai transformar esse código para que novos comportamentos possam entrar sem quebrar quem já usa o sistema.
 
-**Com polimorfismo:**
-```java
-// COM polimorfismo — elegante, extensível
-double totalFolha = 0;
-for (Funcionario f : funcionarios) {
-    totalFolha += f.calcularSalario(); // cada objeto responde com seu próprio comportamento
-}
-// Adicionar novo tipo = criar nova subclasse. Este código NÃO muda!
-```
+> **Pare por 60 segundos:** antes de ler a solução, responda mentalmente: se uma lista é declarada como `List<Funcionario>`, ela pode guardar um `Horista`? E quem deve decidir como o salário é calculado: a lista ou o objeto?
+
+### Ao final, você deverá conseguir
+
+- explicar polimorfismo usando **referência do tipo geral + objeto de tipo específico**;
+- prever qual implementação será executada por **ligação tardia**;
+- avaliar se uma subclasse realmente pode substituir sua superclasse usando o **LSP**;
+- relacionar o encontro com os cinco princípios do **SOLID**;
+- adicionar um novo tipo sem alterar o código que processa a coleção.
+
+### O ritmo recomendado
+
+| Momento | Pergunta-guia | Evidência de aprendizagem |
+|---|---|---|
+| Aquecimento | O que quebra quando aparece um novo tipo? | Você localiza o ponto frágil. |
+| Leitura de código | Quem sabe o tipo e quem sabe o comportamento? | Você separa referência de objeto. |
+| Laboratório | O que a JVM chama em cada iteração? | Você prevê a saída antes de executar. |
+| Projeto | Uma subclasse preserva o contrato? | Você detecta uma violação do LSP. |
+| Prática | Consigo adicionar um tipo sem editar o processador? | Você aplica OCP + LSP. |
 
 ---
 
-## 2. Princípio da Substituição de Liskov (LSP)
+## 1. O problema: um processador que conhece todos os tipos
 
-> *"Se S é subtipo de T, então objetos do tipo T podem ser substituídos por objetos do tipo S sem alterar as propriedades desejáveis do programa."* — Barbara Liskov, 1987
+Começamos com uma solução comum. A folha de pagamento recebe funcionários, mas o próprio processador precisa perguntar qual é o tipo concreto de cada item.
 
-**Em termos práticos:**
-> Onde cabe um `Funcionario`, cabe um `Horista`, `Assalariado` ou `Comissionado` — sem que o código que usa `Funcionario` precise saber qual deles é.
+```java
+// Funciona, mas o processador conhece cada tipo concreto.
+double totalFolha = 0;
+
+for (Funcionario f : funcionarios) {
+    if (f instanceof Horista) {
+        totalFolha += ((Horista) f).calcularSalario();
+    } else if (f instanceof Assalariado) {
+        totalFolha += ((Assalariado) f).calcularSalario();
+    } else if (f instanceof Comissionado) {
+        totalFolha += ((Comissionado) f).calcularSalario();
+    }
+}
+```
+
+O cálculo parece correto. O problema está no **custo de mudança**: para criar `Estagiario`, será preciso editar `calcularTotalFolha()`. Se o sistema tiver dez relatórios, talvez seja necessário editar dez lugares.
+
+> **Pergunta para a dupla:** o que deveria mudar quando nasce um novo tipo de funcionário: o novo tipo ou todos os processadores que já conhecem os tipos antigos?
+
+A solução polimórfica desloca a responsabilidade para o objeto que possui a regra:
+
+```java
+double totalFolha = 0;
+
+for (Funcionario f : funcionarios) {
+    totalFolha += f.calcularSalario();
+}
+```
+
+O `for` não sabe se `f` é `Horista`, `Assalariado` ou `Comissionado`. Ele só conhece o contrato `Funcionario.calcularSalario()`.
+
+### A ideia em uma frase
+
+**Polimorfismo permite que um código trabalhe com o tipo geral, enquanto cada objeto fornece seu comportamento específico.**
+
+---
+
+## 2. O contrato e a substituição
+
+O contrato comum fica em uma classe abstrata. Ela reúne o que todo funcionário tem e declara o comportamento que todo funcionário deve oferecer.
+
+```java
+public abstract class Funcionario {
+    private final String nome;
+
+    protected Funcionario(String nome) {
+        if (nome == null || nome.isBlank()) {
+            throw new IllegalArgumentException("Nome obrigatório");
+        }
+        this.nome = nome;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public abstract double calcularSalario();
+}
+
+public class Horista extends Funcionario {
+    private final double valorHora;
+    private int horas;
+
+    public Horista(String nome, double valorHora) {
+        super(nome);
+        this.valorHora = valorHora;
+    }
+
+    public void registrarHoras(int horas) {
+        if (horas < 0) throw new IllegalArgumentException("Horas inválidas");
+        this.horas += horas;
+    }
+
+    @Override
+    public double calcularSalario() {
+        return valorHora * horas;
+    }
+}
+
+public class Assalariado extends Funcionario {
+    private final double salarioFixo;
+
+    public Assalariado(String nome, double salarioFixo) {
+        super(nome);
+        this.salarioFixo = salarioFixo;
+    }
+
+    @Override
+    public double calcularSalario() {
+        return salarioFixo;
+    }
+}
+```
+
+O código cliente pode tratar os dois objetos da mesma maneira:
+
+```java
+List<Funcionario> folha = new ArrayList<>();
+
+Horista ana = new Horista("Ana", 45.0);
+ana.registrarHoras(160);
+
+folha.add(ana);
+folha.add(new Assalariado("Beto", 5000.0));
+
+for (Funcionario funcionario : folha) {
+    System.out.printf("%s: R$ %.2f%n",
+        funcionario.getNome(), funcionario.calcularSalario());
+}
+```
+
+```mermaid
+classDiagram
+    class Funcionario {
+        <<abstract>>
+        -String nome
+        +getNome() String
+        +calcularSalario() double
+    }
+    class Horista {
+        -double valorHora
+        -int horas
+        +registrarHoras(int) void
+        +calcularSalario() double
+    }
+    class Assalariado {
+        -double salarioFixo
+        +calcularSalario() double
+    }
+    class Comissionado {
+        -double salarioBase
+        -double totalVendas
+        +registrarVenda(double) void
+        +calcularSalario() double
+    }
+    Funcionario <|-- Horista
+    Funcionario <|-- Assalariado
+    Funcionario <|-- Comissionado
+```
+
+### O que significa “substituir”?
+
+O Princípio da Substituição de Liskov (LSP) diz:
+
+> **Se `S` é subtipo de `T`, qualquer código que funciona com `T` deve continuar funcionando quando receber `S`, sem surpresas que quebrem o contrato.**
+
+Em nosso exemplo, onde cabe `Funcionario`, deve caber `Horista`, `Assalariado` ou `Comissionado`. O processador não precisa de uma exceção especial para cada um.
+
+A definição formal de Barbara Liskov é importante, mas a pergunta operacional é ainda mais útil:
+
+> **“Se eu trocar a superclasse por esta subclasse, o que o código cliente espera continua verdadeiro?”**
+
+---
+
+## 3. O que acontece em tempo de execução?
+
+Observe as duas informações diferentes:
+
+```java
+Funcionario f = new Horista("Ana", 45.0);
+```
+
+- **Tipo da referência:** `Funcionario`. É o que o compilador usa para verificar quais métodos podem ser chamados.
+- **Tipo real do objeto:** `Horista`. É o que a JVM usa para escolher a implementação sobrescrita.
 
 ```mermaid
 flowchart LR
-    subgraph CLIENTE["Código cliente"]
-        CODE["folha.calcularTotal()\nusa apenas Funcionario"]
-    end
-    subgraph TIPOS["Tipos reais"]
-        H["Horista\n(é um Funcionario)"]
-        A["Assalariado\n(é um Funcionario)"]
-        C["Comissionado\n(é um Funcionario)"]
-    end
-    CODE --> H
-    CODE --> A
-    CODE --> C
+    R["referência f : Funcionario"] --> O["objeto real : Horista"]
+    O --> M["Horista.calcularSalario()"]
+    R --> C["o compilador permite apenas o contrato de Funcionario"]
+    C --> M
 ```
+
+Essa escolha em tempo de execução é a **ligação tardia** (late binding) ou **despacho dinâmico**.
+
+### Laboratório rápido: rastreie antes de executar
+
+Preencha a tabela do rastreador. O objetivo é descobrir o tipo da referência, o tipo real do objeto e o método escolhido pela JVM.
+
+```code-trace
+KEY:encontro-15-ligacao-tardia
+SCENARIO:Uma referência geral aponta para um objeto Horista. Preveja o tipo e o resultado antes de executar.
+STEP:Funcionario f = new Horista("Ana", 45.0);
+VAR:tipo da referência:String:Funcionario
+VAR:tipo real do objeto:String:Horista
+STEP:((Horista) f).registrarHoras(160);
+VAR:horas acumuladas:int:160
+STEP:double salario = f.calcularSalario();
+VAR:método escolhido:String:Horista.calcularSalario()
+VAR:salário:double:7200.0
+STEP:System.out.println(salario);
+VAR:saída:String:7200.0
+```
+
+> **Atenção:** o polimorfismo não significa que qualquer método de qualquer subclasse pode ser chamado pela referência geral. `f.calcularSalario()` compila porque o método está no contrato `Funcionario`. `f.registrarHoras(160)` não compila porque esse comportamento ainda é específico de `Horista`. A identificação de tipos e o downcasting serão aprofundados no Encontro 16.
 
 ---
 
-> **Atenção:** O LSP é frequentemente violado sem que o programador perceba. O exemplo clássico é o **Quadrado herdando de Retângulo** — parece correto geometricamente, mas quebra o contrato:
+## 4. LSP na prática: contrato, não aparência
+
+Uma herança pode parecer correta no diagrama e ainda ser inválida no comportamento. O teste não é “as classes têm atributos parecidos?”; o teste é “a subclasse preserva o contrato?”.
+
+Verifique quatro pontos:
+
+| Parte do contrato | Pergunta para avaliar uma subclasse |
+|---|---|
+| Pré-condições | A subclasse exige algo mais difícil do que a superclasse exigia? |
+| Pós-condições | Depois do método, a promessa continua verdadeira? |
+| Invariantes | As regras que sempre deveriam ser verdadeiras continuam preservadas? |
+| Exceções | A subclasse transforma um caso válido em erro inesperado? |
+
+### O caso clássico: quadrado e retângulo
+
+Geometricamente, um quadrado é um retângulo. Em um modelo com setters independentes, porém, o contrato de `Retangulo` permite mudar largura e altura separadamente:
 
 ```java
-// Aparentemente faz sentido: todo Quadrado é um Retângulo
 class Retangulo {
     protected double largura;
     protected double altura;
 
-    public void setLargura(double l) { this.largura = l; }
-    public void setAltura(double a)  { this.altura  = a; }
-    public double calcularArea()     { return largura * altura; }
+    public void setLargura(double largura) { this.largura = largura; }
+    public void setAltura(double altura)   { this.altura = altura; }
+    public double area()                   { return largura * altura; }
 }
 
 class Quadrado extends Retangulo {
-    // Quadrado deve ter largura == altura SEMPRE — invariante!
     @Override
-    public void setLargura(double l) { this.largura = l; this.altura = l; } // altera os dois!
+    public void setLargura(double lado) {
+        largura = lado;
+        altura = lado;
+    }
+
     @Override
-    public void setAltura(double a)  { this.altura  = a; this.largura = a; } // altera os dois!
+    public void setAltura(double lado) {
+        altura = lado;
+        largura = lado;
+    }
 }
 
-// Código que funciona com Retangulo...
-void testar(Retangulo r) {
-    r.setLargura(5);
-    r.setAltura(3);
-    // Esperado: 5 * 3 = 15
-    System.out.println(r.calcularArea()); // Com Quadrado: imprime 9 (3*3)! ← LSP VIOLADO
+void conferir(Retangulo retangulo) {
+    retangulo.setLargura(5);
+    retangulo.setAltura(3);
+    System.out.println(retangulo.area()); // contrato esperado: 15
 }
-
-testar(new Retangulo()); // imprime 15 ✅
-testar(new Quadrado());  // imprime 9  ❌ — comportamento inesperado!
 ```
 
-**Diagnóstico:** `Quadrado` não pode ser usado no lugar de `Retângulo` sem alterar o comportamento esperado. A solução é **não usar herança**: `Quadrado` e `Retangulo` devem ser classes independentes que implementam uma interface `FormaGeometrica`.
+`conferir(new Retangulo())` imprime `15`. `conferir(new Quadrado())` imprime `9`, porque a segunda chamada alterou também a largura. O subtipo não preservou o comportamento prometido por `Retangulo`.
+
+**Solução de design:** modelar `Quadrado` e `Retangulo` como formas independentes, ou extrair um contrato menor como `FormaGeometrica` com `area()`. Nem toda relação “é um” do mundo real deve virar herança no código.
+
+> **Regra de bolso:** se a subclasse precisa lançar `UnsupportedOperationException`, ignorar uma promessa ou criar uma exceção especial para o código cliente, pare e revise a hierarquia.
 
 ---
 
-## 3. Upcasting — atribuição de subclasse a referência da superclasse
+## 5. Onde o SOLID entra nesta história?
 
-```java
-// Upcasting IMPLÍCITO — sempre seguro, Java faz automaticamente
-Funcionario f1 = new Horista("Ana", "111", "TI", 45.0);
-Funcionario f2 = new Assalariado("Bob", "222", "RH", 4500.0);
-Funcionario f3 = new Comissionado("Carol", "333", "Vendas", 1500.0, 0.08);
+SOLID é um conjunto de princípios para manter responsabilidades, extensibilidade e dependências sob controle. Não é uma lista para decorar; é uma lente para fazer perguntas melhores sobre o design.
 
-// f1, f2, f3 são referências do tipo Funcionario
-// mas os OBJETOS são Horista, Assalariado e Comissionado respectivamente
-```
+| Princípio | Pergunta de design | Como se conecta ao curso |
+|---|---|---|
+| **S — Responsabilidade Única** | Esta classe tem um único motivo para mudar? | Módulo 2 separou classes e responsabilidades; Módulo 3 protegeu o estado e as regras da classe. |
+| **O — Aberto/Fechado** | Consigo adicionar comportamento sem editar código estável? | O polimorfismo deste encontro permite adicionar `Estagiario` sem alterar o processador da folha. |
+| **L — Substituição de Liskov** | Todo subtipo preserva o contrato do tipo geral? | É o foco deste encontro: herança só é válida quando o comportamento continua substituível. |
+| **I — Segregação de Interfaces** | O cliente depende de métodos que não usa? | Será aprofundado com interfaces no Encontro 17; contratos menores reduzem falsas obrigações. |
+| **D — Inversão de Dependência** | O código de alto nível depende de abstrações ou de classes concretas? | A classe abstrata já é um primeiro passo; interfaces e injeção de dependência serão retomadas no projeto final. |
+
+### O mapa de evolução
 
 ```mermaid
 flowchart LR
-    subgraph STACK
-        RF1["f1 : Funcionario → 0xA1"]
-        RF2["f2 : Funcionario → 0xB2"]
-        RF3["f3 : Funcionario → 0xC3"]
-    end
-    subgraph HEAP
-        OBJ1["0xA1 : Horista\n(é um Funcionario)"]
-        OBJ2["0xB2 : Assalariado\n(é um Funcionario)"]
-        OBJ3["0xC3 : Comissionado\n(é um Funcionario)"]
-    end
-    RF1 --> OBJ1
-    RF2 --> OBJ2
-    RF3 --> OBJ3
+    M2["Módulo 2\nclasses e responsabilidades"] --> M3["Módulo 3\nencapsulamento e invariantes"]
+    M3 --> M4["Módulo 4\nherança e abstração"]
+    M4 --> E15["Encontro 15\ncontratos + polimorfismo"]
+    E15 --> E16["Encontro 16\nidentificação de tipos"]
+    E15 --> E17["Encontro 17\ninterfaces e acoplamento"]
+    E17 --> M6["Módulo 6\nSOLID aplicado ao projeto"]
 ```
+
+### Um único exemplo, cinco perguntas
+
+Considere o processador abaixo:
+
+```java
+public class ProcessadorFolha {
+    public double totalizar(List<Funcionario> funcionarios) {
+        return funcionarios.stream()
+            .mapToDouble(Funcionario::calcularSalario)
+            .sum();
+    }
+}
+```
+
+- **S:** `ProcessadorFolha` totaliza; ele não calcula a regra de cada salário.
+- **O:** um novo `Estagiario` entra na lista sem editar `totalizar`.
+- **L:** todo `Funcionario` precisa entregar um salário válido, sem quebrar o contrato.
+- **I:** se a folha também obrigar todo funcionário a `registrarVenda()`, o contrato está grande demais; separe-o.
+- **D:** o processador depende de `Funcionario`, uma abstração, e não de `Horista` ou `Assalariado`.
+
+> **Importante:** conhecer os cinco princípios agora não significa dominar todos em profundidade. O objetivo é reconhecer o mapa. Os próximos encontros e o projeto final vão exigir que você use essas perguntas em decisões reais.
 
 ---
 
-## 4. Ligação Tardia (Late Binding / Dynamic Dispatch)
+## 6. A decisão que prova que você entendeu
 
-Este é o mecanismo que torna o polimorfismo possível. Em tempo de compilação, o compilador só sabe que `f` é `Funcionario`. Em **tempo de execução**, a JVM descobre qual implementação de `calcularSalario()` chamar.
+Suponha que o negócio crie este novo tipo:
 
 ```java
-Funcionario f = new Horista("Ana", "111", "TI", 45.0);
-((Horista) f).registrarHoras(160);
+public class Estagiario extends Funcionario {
+    private final double bolsa;
 
-// Em tempo de compilação: "f é Funcionario, tem calcularSalario()"
-// Em tempo de execução: JVM vê que o objeto é Horista → chama Horista.calcularSalario()
-System.out.println(f.calcularSalario()); // 7200.0 — comportamento de Horista!
+    public Estagiario(String nome, double bolsa) {
+        super(nome);
+        this.bolsa = bolsa;
+    }
+
+    @Override
+    public double calcularSalario() {
+        return bolsa;
+    }
+}
 ```
+
+Se o processador trabalha com `List<Funcionario>` e chama apenas `calcularSalario()`, nenhuma linha do processador precisa mudar:
+
+```java
+folha.add(new Estagiario("Davi", 1200.0));
+System.out.println(new ProcessadorFolha().totalizar(folha));
+```
+
+Essa é a combinação que queremos reconhecer:
 
 ```mermaid
 flowchart TD
-    A["f.calcularSalario()"] -->|"Compilação:\nverifica se Funcionario tem o método"| B{OK - existe em Funcionario}
-    B -->|"Runtime:\nJVM verifica o tipo real do objeto"| C{Tipo real é Horista}
-    C -->|"Chama"| D["Horista.calcularSalario()\n= 45.0 × 160 = 7200.0"]
-    style D fill:#4ade80,color:#000
-```
-
----
-
-## 5. Processamento em lote — o poder do polimorfismo
-
-```java
-import java.util.ArrayList;
-import java.util.List;
-
-public class GerenciadorFolha {
-
-    // Aceita QUALQUER lista de funcionários — passado, presente ou futuro
-    public static double calcularTotalFolha(List<Funcionario> funcionarios) {
-        double total = 0;
-        for (Funcionario f : funcionarios) {
-            total += f.calcularSalario(); // late binding em ação
-        }
-        return total;
-    }
-
-    public static Funcionario encontrarMaiorSalario(List<Funcionario> funcionarios) {
-        if (funcionarios.isEmpty())
-            throw new IllegalArgumentException("Lista vazia.");
-        Funcionario maior = funcionarios.get(0);
-        for (Funcionario f : funcionarios) {
-            if (f.calcularSalario() > maior.calcularSalario()) {
-                maior = f;
-            }
-        }
-        return maior;
-    }
-
-    public static void imprimirFolha(List<Funcionario> funcionarios) {
-        System.out.println("=== FOLHA DE PAGAMENTO ===");
-        for (Funcionario f : funcionarios) {
-            System.out.printf("  %-20s R$ %8.2f%n", f.getNome(), f.calcularSalario());
-        }
-        System.out.printf("  TOTAL: R$ %.2f%n", calcularTotalFolha(funcionarios));
-    }
-
-    public static void main(String[] args) {
-        // ArrayList<Funcionario> pode conter qualquer subtipo
-        List<Funcionario> folha = new ArrayList<>();
-
-        Horista ana = new Horista("Ana Silva", "111", "TI", 45.0);
-        ana.registrarHoras(168);
-
-        Assalariado bob = new Assalariado("Bob Costa", "222", "RH", 4500.0);
-
-        Comissionado carol = new Comissionado("Carol Melo", "333", "Vendas", 1500.0, 0.08);
-        carol.registrarVenda(30000.0);
-
-        // Todos tratados uniformemente
-        folha.add(ana);
-        folha.add(bob);
-        folha.add(carol);
-
-        // Podemos adicionar novos tipos no futuro sem alterar o código acima:
-        // folha.add(new Estagiario("Davi", "444", "TI", 800.0)); — funcionaria!
-
-        imprimirFolha(folha);
-        System.out.printf("Maior salário: %s%n", encontrarMaiorSalario(folha).getNome());
-    }
-}
-```
-
----
-
-## 6. Coleção heterogênea — formas geométricas
-
-```java
-public class DemoPolimorfismo {
-    public static void main(String[] args) {
-        // Array de FormaGeometrica — heterogêneo mas homogêneo na interface
-        List<FormaGeometrica> formas = new ArrayList<>();
-        formas.add(new Circulo("Vermelho", 5.0));
-        formas.add(new Retangulo("Azul", 4.0, 6.0));
-        formas.add(new Circulo("Verde", 3.0));
-        formas.add(new Retangulo("Amarelo", 8.0, 2.0));
-
-        // Processamento uniforme — cada forma responde com sua implementação
-        double somaAreas = 0;
-        FormaGeometrica maior = formas.get(0);
-
-        for (FormaGeometrica f : formas) {
-            f.exibir(); // comportamento polimórfico
-            somaAreas += f.calcularArea();
-            if (f.calcularArea() > maior.calcularArea()) maior = f;
-        }
-
-        System.out.printf("%nSoma total das áreas: %.2f%n", somaAreas);
-        System.out.printf("Maior área: %s (%.2f)%n",
-            maior.getClass().getSimpleName(), maior.calcularArea());
-    }
-}
+    A["Processador depende de Funcionario"] --> B["Lista recebe qualquer subtipo válido"]
+    B --> C["Cada objeto executa seu calcularSalario()"]
+    C --> D["Novo tipo entra sem alterar o processador"]
+    D --> E["OCP + LSP + despacho dinâmico"]
 ```
 
 ---
 
 ## Exercícios Práticos
 
----
+Agora a prática é curta e intencional: um exercício para **rastrear**, um para **criar** e um para **avaliar um design**.
 
-### Exercício 1 — Fácil · 25 XP
-**Preveja a saída com polimorfismo**
+### Exercício 1 — Preveja antes de executar
+
+Considere o código:
 
 ```java
 abstract class Forma {
     abstract String nome();
+
     void descrever() {
-        System.out.println("Eu sou: " + nome());
+        System.out.println("Forma: " + nome());
     }
 }
-class Quadrado extends Forma {
-    @Override String nome() { return "Quadrado"; }
+
+class Circulo extends Forma {
+    @Override String nome() { return "Círculo"; }
 }
+
 class Triangulo extends Forma {
     @Override String nome() { return "Triângulo"; }
+
     @Override void descrever() {
-        System.out.print("Forma especial! ");
+        System.out.print("Especial — ");
         super.descrever();
     }
 }
 
-public class Main {
-    public static void main(String[] args) {
-        Forma[] formas = { new Quadrado(), new Triangulo(), new Quadrado() };
-        for (Forma f : formas) {
-            f.descrever(); // O que imprime cada iteração?
-        }
-    }
+Forma[] formas = { new Circulo(), new Triangulo(), new Circulo() };
+for (Forma forma : formas) {
+    forma.descrever();
 }
 ```
 
----
+Antes de executar:
 
-### Exercício 2 — Fácil · 25 XP
-**Upcasting na prática**
+1. escreva a saída completa, linha por linha;
+2. marque qual chamada usa despacho dinâmico;
+3. explique por que `super.descrever()` ainda termina chamando `Triangulo.nome()`.
 
-Crie a hierarquia `Musica` → `MPB`, `Rock`, `Classical`. Cada tipo tem `String genero()` e `String tocar()` retornando strings diferentes. Crie um `ArrayList<Musica>` com 6 músicas de tipos variados, percorra e chame `tocar()` em cada uma sem saber o tipo exato.
+Depois, execute e compare. O objetivo não é acertar por sorte: é justificar qual é o tipo da referência e qual é o tipo real em cada iteração.
 
----
+### Exercício 2 — Crie uma coleção extensível
 
-### Exercício 3 — Médio · 25 XP
-**Calculadora de impostos**
+Modele um cálculo de frete sem `instanceof` no processador.
 
 Crie a hierarquia:
+
+```text
+abstract Entrega
+├── EntregaEconomica
+├── EntregaExpressa
+└── EntregaAgendada
 ```
-abstract Imposto → IR, ICMS, ISS
+
+Requisitos:
+
+- `Entrega` deve ter destino e distância, além de `calcularFrete()`;
+- `Economica`: R$ 1,20 por quilômetro;
+- `Expressa`: R$ 2,50 por quilômetro + R$ 10,00;
+- `Agendada`: R$ 1,80 por quilômetro + R$ 5,00;
+- crie uma `List<Entrega>` com pelo menos quatro objetos;
+- implemente `totalizar(List<Entrega>)` chamando apenas `calcularFrete()`;
+- adicione uma nova `Entrega` depois que o totalizador estiver pronto e confirme que ele não precisou ser alterado.
+
+**Critério de revisão:** seu código demonstra OCP? Cada subtipo pode substituir `Entrega` sem surpresa? Onde está a responsabilidade de calcular cada regra?
+
+### Exercício 3 — Auditoria de contratos: encontre as violações
+
+O código a seguir contém três decisões de design que quebram contratos. Use o laboratório interativo para classificar cada uma e, depois, proponha uma correção em uma frase.
+
+```bug-hunt
+BUG:1:class Quadrado extends Retangulo { setLargura(l) { largura = l; altura = l; } }:A alteração de uma dimensão também altera a outra.
+Q:Qual princípio é violado quando o cliente espera alterar largura e altura independentemente?:LSP — o subtipo muda uma promessa da superclasse|SRP — há dois construtores|DIP — faltou uma interface|Nenhum princípio: toda herança é válida:0
+BUG:2:class Pinguim extends Ave { @Override void voar() { throw new UnsupportedOperationException(); } }:O subtipo não consegue cumprir um comportamento prometido por Ave.
+Q:Qual é o sinal mais forte de que a hierarquia deve ser revista?:A subclasse tem menos atributos|A subclasse lança exceção para um comportamento que a superclasse promete|A classe usa private|O método tem @Override:1
+BUG:3:class DescontoVIP extends Desconto { aplicar(valor) { if (valor < 1000) throw new IllegalArgumentException(); } }:A classe derivada aceita menos entradas do que a classe-base aceitava.
+Q:O que aconteceu com o contrato?:A pré-condição ficou mais forte e a substituição deixou de ser segura|A pós-condição ficou mais forte, o que sempre é erro|O objeto foi convertido por upcasting|A coleção ficou heterogênea:0
 ```
-- `IR.calcular(renda)` — tabela progressiva (≤2112: isento, ≤2826: 7.5%, ≤3751: 15%, ≤4664: 22.5%, acima: 27.5%)
-- `ICMS.calcular(valorMercadoria)` — 18% do valor
-- `ISS.calcular(valorServico)` — 5% do valor
 
-Crie uma `NotaFiscal` com valor e tipo de imposto. Processe uma lista de 5 notas fiscais com impostos diferentes, calculando o total de impostos arrecadados.
+Na entrega, registre também uma correção de design para cada caso. Uma boa resposta pode usar uma interface menor, composição ou classes independentes; não precisa forçar toda relação do domínio para dentro de uma hierarquia.
 
 ---
 
-### Exercício 4 — Médio · 25 XP
-**Sistema de Transporte**
+## Gabarito para revisão
 
-Crie `Transporte` → `Onibus`, `Metro`, `Taxi`. Cada um tem `calcularTarifa(distanciaKm)`:
-- `Onibus`: R$ 4,40 fixa
-- `Metro`: R$ 5,00 fixa
-- `Taxi`: R$ 2,50 bandeirada + R$ 1,80/km
+<!-- gabarito-start -->
 
-Crie uma lista de 10 viagens (tipo, distância). Calcule: custo total de todas as viagens, custo médio por tipo de transporte, transporte mais caro e mais barato.
+### Exercício 1
 
----
+```text
+Forma: Círculo
+Especial — Forma: Triângulo
+Forma: Círculo
+```
 
-### Exercício 5 — Difícil · 25 XP
-**Simulação de jogo de RPG**
+Em `forma.descrever()`, a assinatura visível é a de `Forma`, mas a implementação de `Triangulo.descrever()` é escolhida quando o objeto real é um triângulo. Dentro de `super.descrever()`, a chamada `nome()` continua virtual e escolhe `Triangulo.nome()`.
 
-Crie a hierarquia `Personagem` (nome, hp, nivel) → `Guerreiro`, `Mago`, `Arqueiro`. Cada tipo implementa:
-- `atacar()` → retorna int (dano causado)
-- `defender(int dano)` → reduz hp com regras próprias (ex: guerreiro reduz 30% do dano)
-- `habilidadeEspecial()` → comportamento único
+### Exercício 2
 
-Crie um `Arena` com dois times de 3 personagens cada. Simule rodadas de combate polimórfico até um time ser eliminado.
-
----
-
-### Exercício 6 — Troubleshooting · 25 XP
-**Diagnóstico: Violações do LSP e Upcasting Incorreto**
-
-O código abaixo tem **3 erros**. Um viola o LSP ao restringir comportamento da superclasse, um tenta chamar método de subclasse via referência de superclasse sem cast, e um aplica upcasting para tipo errado. Identifique e corrija.
+Uma solução mínima mantém o totalizador independente dos subtipos:
 
 ```java
-class Ave {
-    public void voar() {
-        System.out.println("Voando...");
-    }
-    public void comer() {
-        System.out.println("Comendo...");
-    }
-}
-
-// Erro 1: Pinguim É-UMA Ave mas não pode voar — viola o LSP
-class Pinguim extends Ave {
-    @Override
-    public void voar() {
-        throw new UnsupportedOperationException("Pinguim não voa!");
-        // Código que usa Ave.voar() vai quebrar com Pinguim
-    }
-}
-
-public class Main {
-    public static void main(String[] args) {
-        // Erro 2: tenta chamar método específico de Pinguim via referência Ave
-        Ave ave = new Pinguim();
-        ave.nadar();   // não compila — 'nadar()' não existe em Ave
-
-        // Erro 3: upcasting para tipo errado — ClassCastException garantida
-        Ave outra = new Ave();
-        Pinguim p = (Pinguim) outra;  // compila, mas lança ClassCastException!
-        p.comer();
-    }
+public static double totalizar(List<Entrega> entregas) {
+    return entregas.stream()
+        .mapToDouble(Entrega::calcularFrete)
+        .sum();
 }
 ```
 
-> **Dicas:** (1) Se uma subclasse não pode implementar um método herdado sem lançar exceção, o design está errado — separe em `AveVoadora` e `AveNaoVoadora` ou use interfaces `Voavel`. (2) Para chamar `nadar()`, é preciso fazer downcasting com `instanceof` primeiro: `if (ave instanceof Pinguim p) p.nadar()`. (3) Antes de qualquer cast descendente, verifique o tipo real com `instanceof`.
+Para avaliar, verifique se as três classes implementam o contrato, se não há `instanceof` no totalizador e se `EntregaAgendada` pode ser adicionada sem modificar `totalizar`.
+
+### Exercício 3
+
+1. `Quadrado` altera o significado de `setLargura` e `setAltura`; use uma abstração comum como `FormaGeometrica.area()` ou remova a herança.
+2. `Pinguim` não pode cumprir o contrato de `Ave`; separe `Ave` de `AveVoadora` ou modele voar como uma capacidade opcional.
+3. `DescontoVIP` fortalece uma pré-condição; uma chamada válida para `Desconto` não pode virar erro apenas porque recebeu um subtipo.
+
+<!-- gabarito-end -->
+
+## Fechamento: o mapa que você deve levar
+
+1. **Referência geral:** define o que o compilador permite chamar.
+2. **Objeto real:** define qual sobrescrita a JVM executa.
+3. **LSP:** herança só é boa quando a subclasse preserva o contrato.
+4. **SOLID:** polimorfismo ajuda principalmente OCP e LSP, mas conversa com todos os outros princípios.
+
+No próximo encontro, você verá o limite desse processamento genérico: quando um comportamento é exclusivo de uma subclasse, como identificar o tipo real sem transformar o código em uma sequência perigosa de casts.
