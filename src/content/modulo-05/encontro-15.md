@@ -71,6 +71,20 @@ O `for` não sabe se `f` é `Horista`, `Assalariado` ou `Comissionado`. Ele só 
 
 **Polimorfismo permite que um código trabalhe com o tipo geral, enquanto cada objeto fornece seu comportamento específico.**
 
+### Atividade interativa: vire o responsável pela mudança
+
+Complete as decisões abaixo sem olhar novamente para o código. A meta é perceber onde o polimorfismo concentra a mudança quando um novo tipo aparece.
+
+```fill-table
+COL1: Pergunta sobre o design
+COL2: Complete a resposta
+LEGEND: Preencha de memória e clique fora do campo. Se errar, releia apenas a ideia em uma frase e tente de novo.
+O loop precisa conhecer Horista, Assalariado e Comissionado separadamente? | não
+Quem deve conhecer a regra de cálculo do salário? | objeto
+Ao criar Estagiario, o método totalizar precisa ser editado? | não
+Qual chamada genérica o processador faz em cada item? | f.calcularSalario()
+```
+
 ---
 
 ## 2. O contrato e a substituição
@@ -188,6 +202,17 @@ A definição formal de Barbara Liskov é importante, mas a pergunta operacional
 
 > **“Se eu trocar a superclasse por esta subclasse, o que o código cliente espera continua verdadeiro?”**
 
+### Atividade interativa: é-um ou trabalha-com?
+
+Classifique os relacionamentos. O objetivo é separar uma substituição válida de uma classe que apenas usa a abstração para realizar seu trabalho.
+
+```is-a-has-a
+PAIR:Horista|Funcionario:heranca:Horista é um Funcionario e pode ocupar qualquer lugar que espere esse contrato.
+PAIR:Assalariado|Funcionario:heranca:Assalariado também fornece calcularSalario() sem exigir um tratamento especial.
+PAIR:Estagiario|Funcionario:heranca:Estagiario é mais um subtipo válido para a coleção polimórfica.
+PAIR:ProcessadorFolha|Funcionario:composicao:O processador trabalha com Funcionarios; ele não é um tipo de Funcionario.
+```
+
 ---
 
 ## 3. O que acontece em tempo de execução?
@@ -288,6 +313,20 @@ void conferir(Retangulo retangulo) {
 
 > **Regra de bolso:** se a subclasse precisa lançar `UnsupportedOperationException`, ignorar uma promessa ou criar uma exceção especial para o código cliente, pare e revise a hierarquia.
 
+### Atividade interativa: auditoria do contrato
+
+Associe cada sinal de alerta à parte do contrato que está em risco. Pense como uma pessoa revisando uma API: o que o cliente podia assumir antes continua valendo?
+
+```fill-table
+COL1: Sinal observado na subclasse
+COL2: Parte do contrato afetada
+LEGEND: Use os quatro termos do texto: pré-condição, pós-condição, invariante e exceção.
+Aceita menos entradas do que a superclasse aceitava | pré-condição
+Depois do método, a promessa anunciada pela superclasse deixa de ser verdadeira | pós-condição
+Uma regra que deveria permanecer sempre verdadeira é quebrada | invariante
+Um caso válido para a superclasse passa a lançar erro inesperado | exceção
+```
+
 ---
 
 ## 5. Onde o SOLID entra nesta história?
@@ -336,6 +375,21 @@ public class ProcessadorFolha {
 
 > **Importante:** conhecer os cinco princípios agora não significa dominar todos em profundidade. O objetivo é reconhecer o mapa. Os próximos encontros e o projeto final vão exigir que você use essas perguntas em decisões reais.
 
+### Atividade interativa: qual lente SOLID usar?
+
+Leia a pergunta e escreva a sigla do princípio que ajuda a respondê-la. Não decore a ordem: reconstrua a conexão com o exemplo da folha.
+
+```fill-table
+COL1: Pergunta de design
+COL2: Princípio SOLID
+LEGEND: Responda com uma sigla: SRP, OCP, LSP, ISP ou DIP.
+Consigo adicionar Estagiario sem editar totalizar? | OCP
+Todo subtipo mantém o contrato de Funcionario? | LSP
+ProcessadorFolha tem apenas a responsabilidade de totalizar? | SRP
+O processador depende de Funcionario em vez de Horista? | DIP
+O contrato obriga o cliente a depender de métodos que ele não usa? | ISP
+```
+
 ---
 
 ## 6. A decisão que prova que você entendeu
@@ -373,6 +427,25 @@ flowchart TD
     B --> C["Cada objeto executa seu calcularSalario()"]
     C --> D["Novo tipo entra sem alterar o processador"]
     D --> E["OCP + LSP + despacho dinâmico"]
+```
+
+### Atividade interativa: siga a entrada do novo tipo
+
+Preveja o caminho completo antes de executar: a coleção continua geral, mas cada objeto entrega sua própria implementação.
+
+```code-trace
+KEY:encontro-15-novo-subtipo
+SCENARIO:O processador recebe um Assalariado e um Estagiario. Descubra quais implementações a JVM chama e qual total é produzido.
+STEP:List<Funcionario> folha = List.of(new Assalariado("Beto", 5000.0), new Estagiario("Davi", 1200.0));
+VAR:tipo da coleção:String:List<Funcionario>
+VAR:tipo real do primeiro objeto:String:Assalariado
+VAR:tipo real do segundo objeto:String:Estagiario
+STEP:double total = new ProcessadorFolha().totalizar(folha);
+VAR:implementação da primeira chamada:String:Assalariado.calcularSalario()
+VAR:implementação da segunda chamada:String:Estagiario.calcularSalario()
+VAR:total:double:6200.0
+STEP:System.out.println(total);
+VAR:saída:String:6200.0
 ```
 
 ---
