@@ -49,6 +49,7 @@
 }
 
 :root {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -123,8 +124,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 10% 0%, color-mix(in oklch, var(--primary) 5%, transparent), transparent 28rem),
+      radial-gradient(circle at 90% 10%, color-mix(in oklch, #6366f1 5%, transparent), transparent 30rem);
   }
   html {
     @apply font-sans;
   }
+}
+
+@layer components {
+  .academy-grid {
+    background-image: linear-gradient(to right, rgb(148 163 184 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(148 163 184 / 0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black, transparent 90%);
+  }
+
+  .mission-glow {
+    box-shadow: 0 24px 80px -32px rgb(30 41 59 / 0.65);
+  }
+
+  .content-surface {
+    box-shadow: 0 18px 50px -38px rgb(15 23 42 / 0.42);
+  }
+}
+
+/* Keep the academy type and atmosphere explicit across Tailwind layers. */
+html,
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 10% 0%, color-mix(in oklch, var(--primary) 5%, transparent), transparent 28rem),
+    radial-gradient(circle at 90% 10%, color-mix(in oklch, #6366f1 5%, transparent), transparent 30rem);
 }
