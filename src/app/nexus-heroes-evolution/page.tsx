@@ -163,6 +163,7 @@ export default function NexusHeroesEvolutionPage() {
   const [phase, setPhase] = useState<Phase>('select')
   const [heroKind, setHeroKind] = useState<HeroKind>('guerreiro')
   const [nameInput, setNameInput] = useState('')
+  const [nameError, setNameError] = useState('')
   const [hero, setHero] = useState<Hero | null>(null)
   const [enemies, setEnemies] = useState<Enemy[]>([])
   const [cells, setCells] = useState<Record<string, CellKind>>(() => initialCells())
@@ -181,7 +182,12 @@ export default function NexusHeroesEvolutionPage() {
   }, [])
 
   const startGame = useCallback(() => {
-    const name = nameInput.trim() || HERO_META[heroKind].label
+    const name = nameInput.trim()
+    if (name.length < 2) {
+      setNameError('Digite o nome do herói para iniciar a missão.')
+      return
+    }
+    setNameError('')
     const preset = HERO_PRESETS[heroKind]
     setHero({ name, kind: heroKind, ...preset, xp: 0, coins: 0, steps: 0, row: 1, col: 1 })
     setEnemies(createEnemies())
@@ -198,6 +204,8 @@ export default function NexusHeroesEvolutionPage() {
   const reset = useCallback(() => {
     setPhase('select')
     setHero(null)
+    setNameInput('')
+    setNameError('')
     setShowCodex(false)
   }, [])
 
@@ -350,10 +358,13 @@ export default function NexusHeroesEvolutionPage() {
               </div>
             </section>
           </div>
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div><p className="text-xs font-bold uppercase tracking-widest text-slate-500">Escolha um objeto concreto</p><p className="mt-1 text-slate-300">Todos são Personagem, mas cada um responde de um jeito.</p></div>
-            <input value={nameInput} onChange={(event) => setNameInput(event.target.value)} maxLength={16} placeholder="Nome do herói" className="w-44 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-fuchsia-400" />
-          </div>
+          <section className="mb-7 max-w-2xl rounded-3xl border-2 border-fuchsia-400/60 bg-gradient-to-br from-fuchsia-500/15 via-slate-900 to-slate-950 p-5 shadow-xl shadow-fuchsia-950/30 ring-1 ring-fuchsia-300/20">
+            <label htmlFor="hero-name" className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-fuchsia-200">🔑 Nome do herói <span className="rounded-full bg-fuchsia-400/15 px-2 py-0.5 text-[10px] tracking-normal text-fuchsia-100">obrigatório</span></label>
+            <p className="mt-2 text-sm text-slate-300">O nome será passado ao construtor e aparecerá nas mensagens do System Console.</p>
+            <input id="hero-name" autoFocus value={nameInput} onChange={(event) => { setNameInput(event.target.value); if (nameError) setNameError('') }} onKeyDown={(event) => { if (event.key === 'Enter') startGame() }} maxLength={16} placeholder="Digite o nome do seu personagem" className={`mt-4 w-full rounded-2xl border bg-slate-950 px-4 py-3 text-lg font-bold text-white outline-none transition placeholder:text-slate-600 focus:ring-4 ${nameError ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20' : 'border-fuchsia-400/70 focus:border-fuchsia-300 focus:ring-fuchsia-400/20'}`} />
+            {nameError ? <p role="alert" className="mt-2 text-sm font-bold text-rose-300">⚠️ {nameError}</p> : <p className="mt-2 text-xs text-slate-500">Mínimo de 2 caracteres · exemplo: Ayla, Nilo ou Iara</p>}
+          </section>
+          <div className="mb-6"><p className="text-xs font-bold uppercase tracking-widest text-slate-500">Escolha um objeto concreto</p><p className="mt-1 text-slate-300">Todos são Personagem, mas cada um responde de um jeito.</p></div>
           <div className="grid gap-4 md:grid-cols-3">
             {(Object.keys(HERO_META) as HeroKind[]).map((kind) => {
               const meta = HERO_META[kind]
