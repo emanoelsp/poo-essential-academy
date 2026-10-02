@@ -34,26 +34,29 @@ interface Props {
 
 const STONE = '#75503a'
 const STONE_LIGHT = '#ad7950'
+const STONE_DARK = '#56382f'
 
 function RuinBlock({ position, scale, rotation = 0 }: { position: [number, number, number]; scale: [number, number, number]; rotation?: number }) {
-  return <RoundedBox castShadow receiveShadow position={position} rotation={[0, rotation, 0]} scale={scale} args={[1, 1, 1]} radius={0.1} smoothness={3}><meshStandardMaterial color={STONE} roughness={0.88} metalness={0.04} /></RoundedBox>
+  return <mesh castShadow receiveShadow position={position} rotation={[0, rotation, 0]} scale={scale}><dodecahedronGeometry args={[0.58, 1]} /><meshStandardMaterial color={STONE} roughness={0.94} metalness={0.02} /></mesh>
 }
 
 function WallTile({ row, col, rowIndex, colIndex }: { row: number; col: number; rowIndex: number; colIndex: number }) {
   const variant = (rowIndex * 7 + colIndex * 3) % 3
   return <group position={[col, 0, row]}>
-    <RuinBlock position={[0, 0.35, 0]} scale={[0.95, 0.7, 0.95]} rotation={variant * 0.035} />
-    <RuinBlock position={[-0.2 + variant * 0.18, 0.95, 0.08]} scale={[0.58, 0.55, 0.78]} rotation={-0.06 + variant * 0.04} />
-    {variant !== 1 && <RuinBlock position={[0.28, 1.35, -0.12]} scale={[0.42, 0.34, 0.6]} rotation={0.1} />}
-    <mesh position={[0, 0.05, 0]} receiveShadow><boxGeometry args={[1.02, 0.12, 1.02]} /><meshStandardMaterial color="#633e31" roughness={1} /></mesh>
+    <mesh castShadow receiveShadow position={[-0.18, 0.34, 0.06]} rotation={[0.08, variant * 0.35, -0.04]} scale={[0.86, 0.64, 0.72]}><dodecahedronGeometry args={[0.62, 1]} /><meshStandardMaterial color={STONE_DARK} roughness={0.98} /></mesh>
+    <mesh castShadow receiveShadow position={[0.24, 0.78, -0.08]} rotation={[-0.12, -0.25 + variant * 0.22, 0.1]} scale={[0.55, 0.8, 0.48]}><icosahedronGeometry args={[0.53, 1]} /><meshStandardMaterial color={variant === 1 ? STONE_LIGHT : STONE} roughness={0.94} /></mesh>
+    {variant !== 1 && <mesh castShadow receiveShadow position={[-0.08, 1.32, 0.08]} rotation={[0.18, 0.4, -0.1]} scale={[0.36, 0.38, 0.48]}><dodecahedronGeometry args={[0.46, 0]} /><meshStandardMaterial color={STONE_LIGHT} roughness={0.94} /></mesh>}
+    <mesh castShadow position={[0.38, 0.22, 0.3]} rotation={[0, 0.2, 0.35]} scale={[0.24, 0.16, 0.3]}><icosahedronGeometry args={[0.5, 0]} /><meshStandardMaterial color="#8d5d42" roughness={1} /></mesh>
   </group>
 }
 
-function SandFloor({ row, col, cell }: { row: number; col: number; cell: CellKind }) {
-  const seed = Math.sin(row * 17.3 + col * 4.9) * 43758.5453
-  const height = 0.13 + (seed - Math.floor(seed)) * 0.1
-  const color = cell === 'portal' ? '#55306d' : cell === 'interface' ? '#392b61' : '#a86639'
-  return <RoundedBox receiveShadow position={[col, -0.14 + height / 2, row]} args={[0.96, height, 0.96]} radius={0.07} smoothness={2}><meshStandardMaterial color={color} roughness={0.96} metalness={0.02} /></RoundedBox>
+function ObjectiveMarker({ row, col, cell }: { row: number; col: number; cell: CellKind }) {
+  if (!['portal', 'interface', 'chest', 'crystal', 'trap'].includes(cell)) return null
+  const color = cell === 'portal' ? '#d946ef' : cell === 'interface' ? '#8b5cf6' : cell === 'trap' ? '#ef4444' : '#f59e0b'
+  return <group position={[col, -0.235, row]} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh receiveShadow><ringGeometry args={[0.32, 0.38, 32]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} transparent opacity={0.5} /></mesh>
+    <mesh rotation={[0, 0, Math.PI / 4]}><ringGeometry args={[0.54, 0.56, 8]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} transparent opacity={0.24} /></mesh>
+  </group>
 }
 
 function Dune({ row, col, scale }: { row: number; col: number; scale: number }) {
@@ -71,25 +74,33 @@ function Cactus({ row, col, scale = 1 }: { row: number; col: number; scale?: num
 
 function Obelisk({ row, col, scale = 1 }: { row: number; col: number; scale?: number }) {
   return <group position={[col, 0, row]} scale={scale} rotation={[0, 0.2, 0]}>
-    <RoundedBox castShadow position={[0, 0.16, 0]} args={[0.72, 0.3, 0.72]} radius={0.06} smoothness={2}><meshStandardMaterial color="#6f4b38" roughness={0.9} /></RoundedBox>
+    <mesh castShadow position={[0, 0.16, 0]} scale={[0.72, 0.3, 0.72]}><dodecahedronGeometry args={[0.54, 1]} /><meshStandardMaterial color="#6f4b38" roughness={0.94} /></mesh>
     <mesh castShadow position={[0, 0.95, 0]}><coneGeometry args={[0.3, 1.45, 4]} /><meshStandardMaterial color="#9c6b49" roughness={0.82} metalness={0.12} /></mesh>
     <mesh position={[0, 0.95, 0.2]}><boxGeometry args={[0.035, 0.72, 0.025]} /><meshStandardMaterial color="#f4c27a" emissive="#d97706" emissiveIntensity={1.1} /></mesh>
   </group>
 }
 
+function BrokenColumn({ position, scale = 1, tilt = 0 }: { position: [number, number, number]; scale?: number; tilt?: number }) {
+  return <group position={position} scale={scale} rotation={[0, tilt, tilt * 0.45]}>
+    <mesh castShadow receiveShadow position={[0, 0.42, 0]}><cylinderGeometry args={[0.22, 0.3, 0.84, 9]} /><meshStandardMaterial color={STONE} roughness={0.95} /></mesh>
+    <mesh castShadow position={[0, 0.87, 0]} rotation={[0.1, 0.2, 0]} scale={[0.78, 0.55, 0.8]}><dodecahedronGeometry args={[0.35, 0]} /><meshStandardMaterial color={STONE_LIGHT} roughness={0.95} /></mesh>
+    <mesh castShadow position={[0.12, 0.14, 0.1]} rotation={[0.2, 0.5, -0.1]} scale={[0.9, 0.5, 0.8]}><icosahedronGeometry args={[0.22, 0]} /><meshStandardMaterial color={STONE_DARK} roughness={0.98} /></mesh>
+  </group>
+}
+
 function RubblePatch({ row, col }: { row: number; col: number }) {
   const pieces = [[-0.3, 0.12, 0.12, 0.3], [0.08, 0.1, -0.18, -0.4], [0.32, 0.08, 0.16, 0.75], [-0.02, 0.07, 0.34, 0.15]] as const
-  return <group position={[col, 0, row]}>{pieces.map(([x, y, z, rot], index) => <RoundedBox key={index} castShadow position={[x, y, z]} rotation={[0, rot, rot * 0.4]} args={[0.32 - index * 0.035, 0.2 - index * 0.02, 0.26]} radius={0.06} smoothness={2}><meshStandardMaterial color={index % 2 ? '#896044' : '#a97952'} roughness={0.94} /></RoundedBox>)}</group>
+  return <group position={[col, 0, row]}>{pieces.map(([x, y, z, rot], index) => <mesh key={index} castShadow position={[x, y, z]} rotation={[rot * 0.7, rot, rot * 0.4]} scale={[1 + index * 0.08, 0.7 + index * 0.08, 0.8]}><icosahedronGeometry args={[0.25 - index * 0.018, 1]} /><meshStandardMaterial color={index % 2 ? '#896044' : '#a97952'} roughness={0.96} /></mesh>)}</group>
 }
 
 function Chest({ row, col }: { row: number; col: number }) {
   const ref = useRef<THREE.Group>(null)
   useFrame((state) => { if (ref.current) ref.current.position.y = 0.22 + Math.sin(state.clock.elapsedTime * 2.1 + row) * 0.04 })
   return <group ref={ref} position={[col, 0.2, row]}>
-    <mesh castShadow><boxGeometry args={[0.66, 0.42, 0.5]} /><meshStandardMaterial color="#5b321e" roughness={0.58} metalness={0.18} /></mesh>
-    <mesh castShadow position={[0, 0.29, -0.03]} rotation={[-0.16, 0, 0]}><boxGeometry args={[0.68, 0.14, 0.52]} /><meshStandardMaterial color="#8b4e2a" roughness={0.48} metalness={0.2} /></mesh>
-    <mesh position={[0, 0.1, 0.27]}><boxGeometry args={[0.11, 0.2, 0.035]} /><meshStandardMaterial color="#f5c451" emissive="#d97706" emissiveIntensity={2.2} metalness={0.7} /></mesh>
-    <mesh position={[0, 0.35, 0.05]}><boxGeometry args={[0.42, 0.025, 0.025]} /><meshStandardMaterial color="#e3a642" metalness={0.8} /></mesh>
+    <RoundedBox castShadow args={[0.66, 0.42, 0.5]} radius={0.12} smoothness={5}><meshStandardMaterial color="#5b321e" roughness={0.58} metalness={0.18} /></RoundedBox>
+    <RoundedBox castShadow position={[0, 0.29, -0.03]} rotation={[-0.16, 0, 0]} args={[0.68, 0.14, 0.52]} radius={0.07} smoothness={4}><meshStandardMaterial color="#8b4e2a" roughness={0.48} metalness={0.2} /></RoundedBox>
+    <mesh position={[0, 0.1, 0.27]}><capsuleGeometry args={[0.055, 0.1, 4, 8]} /><meshStandardMaterial color="#f5c451" emissive="#d97706" emissiveIntensity={2.2} metalness={0.7} /></mesh>
+    <mesh position={[0, 0.35, 0.05]}><torusGeometry args={[0.22, 0.018, 6, 24, Math.PI]} /><meshStandardMaterial color="#e3a642" metalness={0.8} /></mesh>
     <pointLight color="#f59e0b" intensity={0.7} distance={2.5} position={[0, 0.45, 0]} />
   </group>
 }
@@ -127,7 +138,7 @@ function Portal({ row, col }: { row: number; col: number }) {
   const inner = useRef<THREE.Mesh>(null)
   useFrame((_, delta) => { if (outer.current) outer.current.rotation.y += delta * 0.55; if (inner.current) inner.current.rotation.z -= delta * 1.25 })
   return <group position={[col, 0.2, row]}>
-    <group ref={outer}><mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.7, 0.1, 14, 40]} /><meshStandardMaterial color="#f0abfc" emissive="#c026d3" emissiveIntensity={3} metalness={0.45} /></mesh><mesh position={[-0.72, 0.7, 0]}><boxGeometry args={[0.18, 1.4, 0.3]} /><meshStandardMaterial color={STONE_LIGHT} roughness={0.85} /></mesh><mesh position={[0.72, 0.7, 0]}><boxGeometry args={[0.18, 1.4, 0.3]} /><meshStandardMaterial color={STONE_LIGHT} roughness={0.85} /></mesh></group>
+    <group ref={outer}><mesh rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.7, 0.1, 14, 40]} /><meshStandardMaterial color="#f0abfc" emissive="#c026d3" emissiveIntensity={3} metalness={0.45} /></mesh><BrokenColumn position={[-0.72, 0, 0]} scale={0.72} tilt={-0.08} /><BrokenColumn position={[0.72, 0, 0]} scale={0.72} tilt={0.1} /></group>
     <mesh ref={inner} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.39, 0.045, 12, 32]} /><meshStandardMaterial color="#67e8f9" emissive="#06b6d4" emissiveIntensity={4} /></mesh>
     <pointLight color="#d946ef" intensity={2.2} distance={4.5} position={[0, 0.65, 0]} />
   </group>
@@ -156,7 +167,8 @@ function HeroAvatar({ hero }: { hero: EvolutionHero }) {
     <mesh castShadow position={[0, 0.9, 0]}><sphereGeometry args={[0.22, 16, 16]} /><meshStandardMaterial color="#d6a878" roughness={0.85} /></mesh>
     {isMage ? <><mesh position={[0, 1.1, 0]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.34, 0.34, 0.07, 12]} /><meshStandardMaterial color="#1e1b4b" roughness={0.9} /></mesh><mesh position={[0, 1.47, 0]}><coneGeometry args={[0.27, 0.72, 12]} /><meshStandardMaterial color="#1e1b4b" roughness={0.9} /></mesh></> : <RoundedBox position={[0, 1.08, 0]} args={[0.5, 0.15, 0.48]} radius={0.05} smoothness={3}><meshStandardMaterial color={isSentinel ? '#064e3b' : '#475569'} metalness={0.6} roughness={0.4} /></RoundedBox>}
     <mesh position={[0, 0.88, 0.2]}><boxGeometry args={[0.26, 0.05, 0.025]} /><meshStandardMaterial color="#111827" /></mesh>
-    <mesh castShadow position={[-0.36, 0.6, 0]} rotation={[0, 0, 0.3]}><sphereGeometry args={[0.13, 10, 10]} /><meshStandardMaterial color={accent} metalness={0.5} /></mesh>
+    <mesh castShadow position={[-0.36, 0.6, 0]} rotation={[0, 0, 0.3]}><capsuleGeometry args={[0.09, 0.32, 4, 8]} /><meshStandardMaterial color={accent} metalness={0.5} /></mesh>
+    <mesh castShadow position={[0.36, 0.6, 0]} rotation={[0, 0, -0.3]}><capsuleGeometry args={[0.09, 0.32, 4, 8]} /><meshStandardMaterial color={accent} metalness={0.5} /></mesh>
     {isMage ? <Staff /> : isSentinel ? <Bow /> : <Sword />}
     <mesh position={[0, 0.38, 0.4]}><boxGeometry args={[0.1, 0.35, 0.04]} /><meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.5} /></mesh>
     <pointLight color={accent} intensity={1.2} distance={3.2} position={[0, 1, 0]} />
@@ -168,7 +180,7 @@ function Goblin({ color }: { color: string }) {
 }
 
 function Golem() {
-  return <group><RoundedBox castShadow position={[0, 0.48, 0]} args={[0.78, 0.82, 0.62]} radius={0.12} smoothness={3}><meshStandardMaterial color="#57534e" roughness={0.95} /></RoundedBox><mesh castShadow position={[0, 1.05, 0]}><dodecahedronGeometry args={[0.34, 0]} /><meshStandardMaterial color="#44403c" roughness={0.92} /></mesh><mesh position={[-0.11, 1.08, 0.28]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color="#fb923c" emissive="#ea580c" emissiveIntensity={4} /></mesh><mesh position={[0.11, 1.08, 0.28]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color="#fb923c" emissive="#ea580c" emissiveIntensity={4} /></mesh><RoundedBox castShadow position={[-0.47, 0.35, 0]} args={[0.2, 0.65, 0.25]} radius={0.06} smoothness={2}><meshStandardMaterial color="#78716c" /></RoundedBox><RoundedBox castShadow position={[0.47, 0.35, 0]} args={[0.2, 0.65, 0.25]} radius={0.06} smoothness={2}><meshStandardMaterial color="#78716c" /></RoundedBox></group>
+  return <group><mesh castShadow position={[0, 0.48, 0]} scale={[0.75, 0.9, 0.62]}><dodecahedronGeometry args={[0.55, 1]} /><meshStandardMaterial color="#57534e" roughness={0.97} /></mesh><mesh castShadow position={[0, 1.05, 0]}><dodecahedronGeometry args={[0.34, 1]} /><meshStandardMaterial color="#44403c" roughness={0.92} /></mesh><mesh position={[-0.11, 1.08, 0.28]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color="#fb923c" emissive="#ea580c" emissiveIntensity={4} /></mesh><mesh position={[0.11, 1.08, 0.28]}><sphereGeometry args={[0.06, 8, 8]} /><meshStandardMaterial color="#fb923c" emissive="#ea580c" emissiveIntensity={4} /></mesh><mesh castShadow position={[-0.46, 0.38, 0]} rotation={[0, 0, -0.16]}><capsuleGeometry args={[0.12, 0.45, 4, 8]} /><meshStandardMaterial color="#78716c" /></mesh><mesh castShadow position={[0.46, 0.38, 0]} rotation={[0, 0, 0.16]}><capsuleGeometry args={[0.12, 0.45, 4, 8]} /><meshStandardMaterial color="#78716c" /></mesh></group>
 }
 
 function ShadowCreature() {
@@ -218,9 +230,17 @@ function Ruins({ map }: { map: string[] }) {
     <RubblePatch row={4.9} col={10.4} />
     <RubblePatch row={8.4} col={4.5} />
     <RubblePatch row={10.8} col={8.9} />
+    <RubblePatch row={1.8} col={7.3} />
+    <RubblePatch row={6.4} col={1.7} />
+    <RubblePatch row={6.8} col={12.2} />
+    <RubblePatch row={11.5} col={6.8} />
+    <BrokenColumn position={[3.1, 0, 1.3]} scale={0.72} tilt={-0.15} />
+    <BrokenColumn position={[10.8, 0, 1.1]} scale={0.64} tilt={0.12} />
+    <BrokenColumn position={[13.2, 0, 8.6]} scale={0.78} tilt={-0.1} />
+    <BrokenColumn position={[3.8, 0, 10.9]} scale={0.58} tilt={0.18} />
     {map.flatMap((line, row) => line.split('').map((symbol, col) => symbol === '#' ? <WallTile key={`${row}-${col}`} row={row} col={col} rowIndex={row} colIndex={col} /> : null))}
-    <group position={[1.2, 0.55, 10.5]} rotation={[0, 0.18, 0]}><RuinBlock position={[-0.55, 0, 0]} scale={[0.24, 1.7, 0.34]} /><RuinBlock position={[0.55, 0, 0]} scale={[0.24, 1.45, 0.34]} /><RuinBlock position={[0, 0.72, 0]} scale={[1.05, 0.25, 0.34]} /></group>
-    <group position={[12.8, 0.55, 3.6]} rotation={[0, -0.22, 0]}><RuinBlock position={[-0.55, 0, 0]} scale={[0.24, 1.55, 0.34]} /><RuinBlock position={[0.55, 0, 0]} scale={[0.24, 1.25, 0.34]} /><RuinBlock position={[0, 0.62, 0]} scale={[1.05, 0.22, 0.34]} /></group>
+    <group position={[1.2, 0.55, 10.5]} rotation={[0, 0.18, 0]}><BrokenColumn position={[-0.55, 0, 0]} scale={0.88} tilt={-0.08} /><BrokenColumn position={[0.55, 0, 0]} scale={0.74} tilt={0.12} /><RuinBlock position={[0, 1.35, 0]} scale={[1.05, 0.32, 0.42]} rotation={0.1} /></group>
+    <group position={[12.8, 0.55, 3.6]} rotation={[0, -0.22, 0]}><BrokenColumn position={[-0.55, 0, 0]} scale={0.82} tilt={0.08} /><BrokenColumn position={[0.55, 0, 0]} scale={0.7} tilt={-0.14} /><RuinBlock position={[0, 1.25, 0]} scale={[1.05, 0.28, 0.38]} rotation={-0.08} /></group>
   </>
 }
 
@@ -235,7 +255,7 @@ function Scene({ map, cells, hero, enemies }: Props) {
     <Sparkles count={90} scale={[20, 3, 18]} size={2.2} speed={0.22} color="#f6c987" opacity={0.24} />
     <CameraRig hero={hero} />
     <Ruins map={map} />
-    {tiles.map(({ row, col, symbol, cell }) => symbol === '#' ? null : <group key={`${row}-${col}`}><SandFloor row={row} col={col} cell={cell} />{cell === 'chest' && <Chest row={row} col={col} />}{cell === 'crystal' && <Crystal row={row} col={col} />}{cell === 'trap' && <Trap row={row} col={col} />}{cell === 'interface' && <InterfaceGate row={row} col={col} />}{cell === 'portal' && <Portal row={row} col={col} />}</group>)}
+    {tiles.map(({ row, col, symbol, cell }) => symbol === '#' ? null : <group key={`${row}-${col}`}><ObjectiveMarker row={row} col={col} cell={cell} />{cell === 'chest' && <Chest row={row} col={col} />}{cell === 'crystal' && <Crystal row={row} col={col} />}{cell === 'trap' && <Trap row={row} col={col} />}{cell === 'interface' && <InterfaceGate row={row} col={col} />}{cell === 'portal' && <Portal row={row} col={col} />}</group>)}
     {enemies.filter((enemy) => enemy.alive).map((enemy) => <EnemyAvatar key={enemy.id} enemy={enemy} />)}
     <HeroAvatar hero={hero} />
   </>
