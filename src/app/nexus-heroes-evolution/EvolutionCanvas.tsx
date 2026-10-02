@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Html, OrbitControls, PerspectiveCamera, Sparkles } from '@react-three/drei'
+import { Html, PerspectiveCamera, Sparkles } from '@react-three/drei'
 import * as THREE from 'three'
 
 type CellKind = 'empty' | 'wall' | 'chest' | 'crystal' | 'trap' | 'interface' | 'portal' | 'start'
@@ -163,6 +163,24 @@ function EnemyAvatar({ enemy }: { enemy: EvolutionEnemy }) {
   </group>
 }
 
+function CameraRig({ hero }: { hero: EvolutionHero }) {
+  const cameraRef = useRef<THREE.PerspectiveCamera>(null)
+  const cameraTarget = useMemo(() => new THREE.Vector3(), [])
+  const lookTarget = useMemo(() => new THREE.Vector3(), [])
+  const smoothLook = useRef(new THREE.Vector3())
+
+  useFrame(() => {
+    if (!cameraRef.current) return
+    cameraTarget.set(hero.col + 7.5, 9.5, hero.row + 7.5)
+    cameraRef.current.position.lerp(cameraTarget, 0.1)
+    lookTarget.set(hero.col, 0.35, hero.row)
+    smoothLook.current.lerp(lookTarget, 0.1)
+    cameraRef.current.lookAt(smoothLook.current)
+  })
+
+  return <PerspectiveCamera ref={cameraRef} makeDefault fov={50} position={[8.5, 10.5, 8.5]} near={0.1} far={70} />
+}
+
 function Ruins({ map }: { map: string[] }) {
   const dunes = useMemo(() => [[2, 2, 1.35], [3, 12, 1.1], [7, 2, 1.2], [10, 12, 1.45], [11, 5, 0.9]] as const, [])
   return <>
@@ -183,14 +201,14 @@ function Scene({ map, cells, hero, enemies }: Props) {
     <directionalLight castShadow position={[-8, 13, -6]} intensity={3.2} color="#ffd08a" shadow-mapSize={[2048, 2048]} shadow-camera-left={-15} shadow-camera-right={15} shadow-camera-top={15} shadow-camera-bottom={-15} />
     <pointLight position={[7, 4, 7]} intensity={2.4} distance={18} color="#ef8f3d" />
     <Sparkles count={90} scale={[20, 3, 18]} size={2.2} speed={0.22} color="#f6c987" opacity={0.24} />
+    <CameraRig hero={hero} />
     <Ruins map={map} />
     {tiles.map(({ row, col, symbol, cell }) => symbol === '#' ? null : <group key={`${row}-${col}`}><SandFloor row={row} col={col} cell={cell} />{cell === 'chest' && <Chest row={row} col={col} />}{cell === 'crystal' && <Crystal row={row} col={col} />}{cell === 'trap' && <Trap row={row} col={col} />}{cell === 'interface' && <InterfaceGate row={row} col={col} />}{cell === 'portal' && <Portal row={row} col={col} />}</group>)}
     {enemies.filter((enemy) => enemy.alive).map((enemy) => <EnemyAvatar key={enemy.id} enemy={enemy} />)}
     <HeroAvatar hero={hero} />
-    <OrbitControls enablePan={false} minDistance={8} maxDistance={23} maxPolarAngle={Math.PI / 2.35} target={[6.5, 0, 6]} />
   </>
 }
 
 export default function EvolutionCanvas(props: Props) {
-  return <Canvas shadows dpr={[1, 1.8]} gl={{ antialias: true }} style={{ background: '#8d5a38' }}><PerspectiveCamera makeDefault position={[7.5, 14.5, 15.5]} fov={42} near={0.1} far={70} /><Scene {...props} /></Canvas>
+  return <Canvas shadows dpr={[1, 1.8]} gl={{ antialias: true }} style={{ background: '#8d5a38' }}><Scene {...props} /></Canvas>
 }
