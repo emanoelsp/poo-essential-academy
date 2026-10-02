@@ -11,7 +11,7 @@ Esta é uma **cópia evoluída**, criada para depois da Aula 17. Ela retoma os m
 - **polimorfismo:** uma chamada feita pelo tipo geral encontra a implementação do objeto real;
 - **interface:** o código cliente depende de uma capacidade/contrato, e não da classe concreta.
 
-O jogo agora tem uma finalidade dupla: vencer o labirinto e sair com um conjunto de evidências que permita construir o diagrama de classes sem inventar relações.
+O jogo agora tem uma finalidade dupla: vencer o labirinto e sair com um conjunto de evidências que permita construir o diagrama de classes sem inventar relações. A arena evoluída usa a escala do Nexus original, ocupa a tela inteira e mantém o **System Console fixo ao lado**.
 
 ```game-launch
 URL: /nexus-heroes-evolution
@@ -41,7 +41,7 @@ Os fragmentos estão escondidos no labirinto. Os guardiões também foram modela
 
 ## 2. Como jogar com intenção de modelagem
 
-Faça uma partida completa e mantenha o **Codex de Evidências** aberto. O mapa é menor e mais legível que o original, mas cada símbolo tem uma função pedagógica.
+Faça uma partida completa e mantenha o **Codex de Evidências** aberto. O mapa é maior, dividido em quatro alas e usa a mesma escala de exploração do Nexus original; cada símbolo tem uma função pedagógica.
 
 | Símbolo | Descoberta no jogo | Evidência que você deve registrar |
 |---|---|---|
@@ -52,14 +52,27 @@ Faça uma partida completa e mantenha o **Codex de Evidências** aberto. O mapa 
 | 🔗 | Fragmento de interface | Qual é o contrato? Quem o implementa? O cliente conhece as classes concretas? |
 | 🌀 | Portal | Por que a vitória depende das evidências, e não apenas de chegar à saída? |
 
+### As quatro alas e os portões
+
+O mapa foi dividido em quatro regiões fechadas. Cada portão tem uma linguagem visual própria e só abre quando a quest correspondente é respondida no pergaminho. A pista da resposta precisa ser encontrada no próprio ambiente: conversa com NPC, baú, cristal, armadilha, inimigo derrotado ou fragmento escondido.
+
+| Região | Portão | Quest | Fontes de pista |
+|---|---|---|---|
+| Ala do Molde | Ferro | Classes e objetos | NPC, baú e inimigo de tipos |
+| Câmara do Estado | Bronze | Encapsulamento e invariantes | Cristal, armadilha e console |
+| Forja da Linhagem | Pedra | Herança e classe abstrata | Guardião derrotado e placa da forja |
+| Observatório dos Contratos | Nexus | Polimorfismo e interface | Fragmento escondido, interface e Sombra do Cast |
+
+O estudante não atravessa um portão por tentativa aleatória: primeiro encontra a pista, depois associa o conceito à explicação correta no pergaminho. Ao concluir as quatro quests, o portal final fica acessível.
+
 ### Roteiro de investigação
 
 1. Na tela inicial, escolha um **Guerreiro**, **Mago** ou **Sentinela**. Observe que os três são variações de `Personagem`, mas têm valores e comportamentos próprios.
 2. Ao iniciar, localize no console o `new`, o construtor e a chamada a `super(...)`. Registre a classe concreta e os atributos que nascem com o objeto.
-3. Visite um baú e responda: isso é uma classe, um objeto ou os dois em momentos diferentes? Qual método muda o inventário?
-4. Visite o cristal e a armadilha. Compare o que o código cliente pede com o que o próprio objeto permite fazer com seu estado.
-5. Fique ao lado de um guardião e pressione **Espaço**. A interface do jogo chama `calcularDano()` sem perguntar primeiro se você é Guerreiro, Mago ou Sentinela. Anote a chamada geral e a resposta específica.
-6. Encontre o fragmento 🔗. Pressione **E** e leia a diferença entre “conhecer o contrato” e “conhecer a classe concreta”.
+3. Explore a primeira ala, converse com o NPC ou abra o baú e vá até o portão de ferro. Leia o pergaminho e associe **Classe × Objeto**.
+4. Na segunda ala, visite o cristal e a armadilha. Compare o que o código cliente pede com o que o próprio objeto permite fazer com seu estado. Use a pista para resolver o portão de bronze.
+5. Derrote o guardião da Forja da Linhagem e leia a placa. A resposta do portão de pedra deve relacionar `Personagem` abstrata com os tipos concretos.
+6. Encontre o fragmento escondido, interaja com a interface e observe a Sombra do Cast. No último pergaminho, associe a mesma chamada à resposta do objeto real e ao contrato `Habilidade`.
 7. Abra o Codex antes de ir ao portal. Verifique quais evidências ainda faltam. Só depois conclua a missão.
 
 > **Regra de ouro:** não copie apenas o texto do console. Para cada evidência, escreva: **quem solicita**, **qual contrato é conhecido**, **qual objeto responde** e **qual regra é protegida**.

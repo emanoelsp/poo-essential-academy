@@ -5,7 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { ContactShadows, Html, PerspectiveCamera, RoundedBox, Sparkles } from '@react-three/drei'
 import * as THREE from 'three'
 
-type CellKind = 'empty' | 'wall' | 'chest' | 'crystal' | 'trap' | 'interface' | 'portal' | 'start'
+type CellKind = 'empty' | 'wall' | 'chest' | 'crystal' | 'trap' | 'interface' | 'portal' | 'start' | 'gate' | 'npc' | 'hidden'
 
 interface EvolutionHero {
   name: string
@@ -30,6 +30,7 @@ interface Props {
   cells: Record<string, CellKind>
   hero: EvolutionHero
   enemies: EvolutionEnemy[]
+  gates: Record<string, boolean>
 }
 
 const STONE = '#75503a'
@@ -91,6 +92,55 @@ function BrokenColumn({ position, scale = 1, tilt = 0 }: { position: [number, nu
     <mesh castShadow receiveShadow position={[0, 0.42, 0]}><cylinderGeometry args={[0.22, 0.3, 0.84, 9]} /><meshStandardMaterial color={STONE} roughness={0.95} /></mesh>
     <mesh castShadow position={[0, 0.87, 0]} rotation={[0.1, 0.2, 0]} scale={[0.78, 0.55, 0.8]}><dodecahedronGeometry args={[0.35, 0]} /><meshStandardMaterial color={STONE_LIGHT} roughness={0.95} /></mesh>
     <mesh castShadow position={[0.12, 0.14, 0.1]} rotation={[0.2, 0.5, -0.1]} scale={[0.9, 0.5, 0.8]}><icosahedronGeometry args={[0.22, 0]} /><meshStandardMaterial color={STONE_DARK} roughness={0.98} /></mesh>
+  </group>
+}
+
+const GATE_INFO: Array<{ id: string; row: number; col: number; style: 'iron' | 'bronze' | 'stone' | 'nexus'; label: string }> = [
+  { id: 'classes', row: 6, col: 14, style: 'iron', label: 'Classe × Objeto' },
+  { id: 'encapsulamento', row: 10, col: 7, style: 'bronze', label: 'Estado protegido' },
+  { id: 'heranca', row: 10, col: 21, style: 'stone', label: 'Linhagem abstrata' },
+  { id: 'polimorfismo', row: 15, col: 14, style: 'nexus', label: 'Contrato final' },
+]
+
+function GateTile({ row, col, gateId, style, open, label }: { row: number; col: number; gateId: string; style: 'iron' | 'bronze' | 'stone' | 'nexus'; open: boolean; label: string }) {
+  const colors = { iron: '#94a3b8', bronze: '#d08b42', stone: '#a8a29e', nexus: '#e879f9' }
+  const color = colors[style]
+  return <group position={[col, 0, row]}>
+    <BrokenColumn position={[-0.38, 0, 0]} scale={0.58} tilt={-0.06} />
+    <BrokenColumn position={[0.38, 0, 0]} scale={0.58} tilt={0.08} />
+    {open ? <>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.72, 0]}><torusGeometry args={[0.46, 0.045, 10, 28]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={2.6} metalness={0.55} /></mesh>
+      <pointLight color={color} intensity={0.7} distance={3} position={[0, 0.65, 0]} />
+    </> : <>
+      <mesh position={[0, 0.62, 0]} rotation={[0, 0, Math.PI / 2]}><torusGeometry args={[0.42, 0.055, 8, 28]} /><meshStandardMaterial color={color} metalness={0.75} roughness={0.32} /></mesh>
+      {[-0.28, -0.09, 0.1, 0.29].map((x) => <mesh key={x} castShadow position={[x, 0.62, 0.03]}><cylinderGeometry args={[0.035, 0.05, 1.03, 8]} /><meshStandardMaterial color={color} metalness={0.72} roughness={0.3} /></mesh>)}
+      <Html distanceFactor={10} position={[0, 1.7, 0]} center><div style={{ color: '#fff7ed', fontFamily: 'monospace', fontSize: 9, fontWeight: 800, textShadow: '0 2px 4px #000', whiteSpace: 'nowrap' }}>🔒 {label}</div></Html>
+    </>}
+    <pointLight color={open ? color : '#f59e0b'} intensity={open ? 0.45 : 0.12} distance={2.5} position={[0, 0.25, 0]} />
+    <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.45, 0.5, 20]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={open ? 0.7 : 0.2} transparent opacity={open ? 0.5 : 0.2} /></mesh>
+  </group>
+}
+
+function NpcAvatar({ row, col }: { row: number; col: number }) {
+  const ref = useRef<THREE.Group>(null)
+  useFrame((state) => { if (ref.current) ref.current.position.y = Math.sin(state.clock.elapsedTime * 2 + col) * 0.025 })
+  return <group ref={ref} position={[col, 0.05, row]}>
+    <mesh castShadow position={[0, 0.35, 0]} scale={[0.38, 0.62, 0.3]}><capsuleGeometry args={[0.42, 0.6, 5, 10]} /><meshStandardMaterial color="#7c3aed" roughness={0.72} /></mesh>
+    <mesh castShadow position={[0, 0.95, 0]}><sphereGeometry args={[0.24, 16, 16]} /><meshStandardMaterial color="#d6a878" roughness={0.82} /></mesh>
+    <mesh castShadow position={[0, 1.14, 0]} scale={[0.36, 0.2, 0.36]}><sphereGeometry args={[0.55, 12, 8]} /><meshStandardMaterial color="#fbbf24" metalness={0.35} roughness={0.42} /></mesh>
+    <mesh castShadow position={[0.3, 0.55, 0.18]} rotation={[0, 0, -0.22]}><capsuleGeometry args={[0.06, 0.28, 4, 8]} /><meshStandardMaterial color="#f8fafc" /></mesh>
+    <Html distanceFactor={10} position={[0, 1.65, 0]} center><div style={{ color: '#fde68a', fontFamily: 'monospace', fontSize: 10, fontWeight: 900, textShadow: '0 2px 4px #000', whiteSpace: 'nowrap' }}>NPC · PISTA</div></Html>
+    <pointLight color="#a78bfa" intensity={0.55} distance={2.8} position={[0, 0.9, 0]} />
+  </group>
+}
+
+function HiddenRelic({ row, col }: { row: number; col: number }) {
+  const ref = useRef<THREE.Group>(null)
+  useFrame((state, delta) => { if (ref.current) { ref.current.rotation.y += delta * 1.2; ref.current.position.y = 0.18 + Math.sin(state.clock.elapsedTime * 2.6) * 0.05 } })
+  return <group ref={ref} position={[col, 0.18, row]}>
+    <mesh castShadow rotation={[0.18, 0.1, -0.14]}><octahedronGeometry args={[0.28, 0]} /><meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={2.2} metalness={0.62} roughness={0.22} /></mesh>
+    <mesh position={[0, -0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.32, 0.38, 24]} /><meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.8} transparent opacity={0.55} /></mesh>
+    <Html distanceFactor={10} position={[0, 0.75, 0]} center><div style={{ color: '#fde68a', fontFamily: 'monospace', fontSize: 9, fontWeight: 900, textShadow: '0 2px 4px #000', whiteSpace: 'nowrap' }}>FRAGMENTO OCULTO</div></Html>
   </group>
 }
 
@@ -241,17 +291,17 @@ function CameraRig({ hero }: { hero: EvolutionHero }) {
 
   useFrame(() => {
     if (!cameraRef.current) return
-    cameraTarget.set(hero.col + 6.7, 9.1, hero.row + 6.7)
+    cameraTarget.set(hero.col + 8, 10, hero.row + 8)
     cameraRef.current.position.lerp(cameraTarget, 0.1)
-    lookTarget.set(hero.col + 0.35, 0.42, hero.row + 0.35)
+    lookTarget.set(hero.col, 0.35, hero.row)
     smoothLook.current.lerp(lookTarget, 0.1)
     cameraRef.current.lookAt(smoothLook.current)
   })
 
-  return <PerspectiveCamera ref={cameraRef} makeDefault fov={47} position={[7.2, 9.4, 7.2]} near={0.1} far={70} />
+  return <PerspectiveCamera ref={cameraRef} makeDefault fov={50} position={[8.5, 10.5, 8.5]} near={0.1} far={90} />
 }
 
-function Ruins({ map }: { map: string[] }) {
+function Ruins({ map, gates }: { map: string[]; gates: Record<string, boolean> }) {
   const dunes = useMemo(() => [[2, 2, 1.35], [3, 12, 1.1], [7, 2, 1.2], [10, 12, 1.45], [11, 5, 0.9]] as const, [])
   return <>
     <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[6.5, -0.28, 6]}><planeGeometry args={[40, 34]} /><meshStandardMaterial color="#8d5a38" roughness={1} /></mesh>
@@ -278,13 +328,20 @@ function Ruins({ map }: { map: string[] }) {
     <BrokenColumn position={[10.8, 0, 1.1]} scale={0.64} tilt={0.12} />
     <BrokenColumn position={[13.2, 0, 8.6]} scale={0.78} tilt={-0.1} />
     <BrokenColumn position={[3.8, 0, 10.9]} scale={0.58} tilt={0.18} />
-    {map.flatMap((line, row) => line.split('').map((symbol, col) => symbol === '#' ? <WallTile key={`${row}-${col}`} row={row} col={col} rowIndex={row} colIndex={col} /> : null))}
+    {map.flatMap((line, row) => line.split('').map((symbol, col) => {
+      if (symbol === '#') return <WallTile key={`${row}-${col}`} row={row} col={col} rowIndex={row} colIndex={col} />
+      if (symbol === 'G') {
+        const gate = GATE_INFO.find((candidate) => candidate.row === row && candidate.col === col)
+        if (gate) return <GateTile key={`${row}-${col}`} row={row} col={col} gateId={gate.id} style={gate.style} open={Boolean(gates[gate.id])} label={gate.label} />
+      }
+      return null
+    }))}
     <group position={[1.2, 0.55, 10.5]} rotation={[0, 0.18, 0]}><BrokenColumn position={[-0.55, 0, 0]} scale={0.88} tilt={-0.08} /><BrokenColumn position={[0.55, 0, 0]} scale={0.74} tilt={0.12} /><RuinBlock position={[0, 1.35, 0]} scale={[1.05, 0.32, 0.42]} rotation={0.1} /></group>
     <group position={[12.8, 0.55, 3.6]} rotation={[0, -0.22, 0]}><BrokenColumn position={[-0.55, 0, 0]} scale={0.82} tilt={0.08} /><BrokenColumn position={[0.55, 0, 0]} scale={0.7} tilt={-0.14} /><RuinBlock position={[0, 1.25, 0]} scale={[1.05, 0.28, 0.38]} rotation={-0.08} /></group>
   </>
 }
 
-function Scene({ map, cells, hero, enemies }: Props) {
+function Scene({ map, cells, hero, enemies, gates }: Props) {
   const tiles = useMemo(() => map.flatMap((line, row) => line.split('').map((symbol, col) => ({ row, col, symbol, cell: cells[`${row},${col}`] }))), [cells, map])
   return <>
     <color attach="background" args={['#a86a48']} />
@@ -296,13 +353,13 @@ function Scene({ map, cells, hero, enemies }: Props) {
     <ContactShadows position={[6.5, -0.25, 6]} opacity={0.32} scale={28} blur={2.5} far={5.5} />
     <Sparkles count={110} scale={[22, 3.5, 20]} size={2.1} speed={0.2} color="#f6c987" opacity={0.25} />
     <CameraRig hero={hero} />
-    <Ruins map={map} />
-    {tiles.map(({ row, col, symbol, cell }) => symbol === '#' ? null : <group key={`${row}-${col}`}><ObjectiveMarker row={row} col={col} cell={cell} />{cell === 'chest' && <Chest row={row} col={col} />}{cell === 'crystal' && <Crystal row={row} col={col} />}{cell === 'trap' && <Trap row={row} col={col} />}{cell === 'interface' && <InterfaceGate row={row} col={col} />}{cell === 'portal' && <Portal row={row} col={col} />}</group>)}
+    <Ruins map={map} gates={gates} />
+    {tiles.map(({ row, col, symbol, cell }) => symbol === '#' || symbol === 'G' ? null : <group key={`${row}-${col}`}><ObjectiveMarker row={row} col={col} cell={cell} />{cell === 'chest' && <Chest row={row} col={col} />}{cell === 'crystal' && <Crystal row={row} col={col} />}{cell === 'trap' && <Trap row={row} col={col} />}{cell === 'interface' && <InterfaceGate row={row} col={col} />}{cell === 'portal' && <Portal row={row} col={col} />}{cell === 'npc' && <NpcAvatar row={row} col={col} />}{cell === 'hidden' && <HiddenRelic row={row} col={col} />}</group>)}
     {enemies.filter((enemy) => enemy.alive).map((enemy) => <EnemyAvatar key={enemy.id} enemy={enemy} />)}
     <HeroAvatar hero={hero} />
   </>
 }
 
 export default function EvolutionCanvas(props: Props) {
-  return <Canvas shadows dpr={[1, 1.8]} gl={{ antialias: true }} camera={{ fov: 47, near: 0.1, far: 70 }} style={{ background: '#a86a48' }}><Scene {...props} /></Canvas>
+  return <Canvas shadows dpr={[1, 1.8]} gl={{ antialias: true }} camera={{ fov: 50, near: 0.1, far: 90 }} style={{ background: '#a86a48' }}><Scene {...props} /></Canvas>
 }
