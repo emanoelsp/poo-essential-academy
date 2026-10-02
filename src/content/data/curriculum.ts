@@ -103,6 +103,7 @@ export const CURRICULUM: Module[] = [
       { slug: 'encontro-15', number: 15, title: 'O Princípio da Substituição — Polimorfismo I', module: 5, type: 'teoria', xp: 50, exercises: 3 },
       { slug: 'encontro-16', number: 16, title: 'Identificação de Tipos — Polimorfismo II',     module: 5, type: 'teoria', xp: 50, exercises: 5 },
       { slug: 'encontro-17', number: 17, title: 'Acoplamento e Contratos — Interfaces',         module: 5, type: 'teoria', xp: 50, exercises: 5 },
+      { slug: 'atividade-nexus-heroes-evolucao', number: 0, title: '🎮 Atividade Prática 2 — Nexus dos Heróis: O Contrato Final', module: 5, type: 'lab', xp: 150, exercises: 0, subtitle: 'Atividade de integração — polimorfismo e interfaces' },
       { slug: 'junit-01',    number: 0,  title: 'Testes Unitários com JUnit 5 — Fundamentos',  module: 5, type: 'complementar', xp: 70, exercises: 6 },
       { slug: 'junit-02',    number: 0,  title: 'Testando Contratos e Interfaces com JUnit 5', module: 5, type: 'complementar', xp: 70, exercises: 5 },
       {
