@@ -614,7 +614,7 @@ export default function NexusHeroesEvolutionPage() {
   const activeQuest = questOpen ? { id: questOpen, ...QUESTS[questOpen] } : null
 
   return <main className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#050813] text-slate-100 lg:flex-row">
-    <section className="relative h-[68dvh] min-h-0 w-full overflow-hidden bg-slate-950 lg:h-full lg:w-[72%]">
+    <section className="relative isolate h-[68dvh] min-h-0 w-full overflow-hidden bg-slate-950 lg:h-full lg:w-[72%]">
       <EvolutionCanvas map={MAP} cells={cells} hero={hero} enemies={enemies} gates={gateStates} />
       <div className="pointer-events-none absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
         <div className="pointer-events-auto max-w-sm rounded-2xl border border-slate-700/70 bg-slate-950/80 px-4 py-3 shadow-2xl backdrop-blur-md"><div className="flex items-center gap-2"><span className="text-xl">{heroMeta.icon}</span><div><h1 className="font-black leading-none">{hero.name}</h1><p className="mt-1 text-[10px] text-slate-400">{heroMeta.label} · referência: Personagem</p></div><span className="ml-3 text-[10px] text-slate-400">👣 {hero.steps} · 🪙 <b className="text-amber-300">{hero.coins}</b></span></div><div className="mt-3 grid grid-cols-2 gap-3"><Bar label="HP" value={hero.hp} max={hero.maxHp} color="bg-rose-500" /><Bar label="Mana" value={hero.mana} max={hero.maxMana} color="bg-cyan-500" /></div></div>
