@@ -2,6 +2,8 @@
 
 > **Módulo 6 · 4 aulas · 200 XP · Apresentação**
 
+> **Etapa 3 de 4 do seu Trabalho Final de UC.** Você vai defender oralmente o mesmo sistema que desenhou no Encontro 18 e implementou no Encontro 19. Depois da defesa, a Etapa 4 (Desafio Final) pede para você voltar a este sistema e estendê-lo aplicando os 5 princípios SOLID — por isso esta aula também introduz SOLID antes de você fechar o curso.
+
 ---
 
 ## O que é uma Defesa Arquitetural?
@@ -538,10 +540,10 @@ flowchart TD
 
 **SOLID — verificação:**
 - [ ] **SRP:** cada classe tem uma única responsabilidade descritível sem "e"
-- [ ] **OCP:** adicionar um novo subtipo não exige modificar `FolhaDePagamento` ou equivalente
+- [ ] **OCP:** adicionar um novo subtipo não exige modificar a classe coordenadora do seu sistema (ex: `PlataformaStreaming`)
 - [ ] **LSP:** toda subclasse pode substituir a superclasse sem comportamentos surpresa
 - [ ] **ISP:** nenhuma classe implementa método que não usa (sem corpo vazio por obrigação)
-- [ ] **DIP:** módulos de alto nível (`FolhaDePagamento`) dependem de abstrações, não de concretos
+- [ ] **DIP:** módulos de alto nível (sua classe coordenadora) dependem de abstrações, não de concretos
 
 **Encapsulamento:**
 - [ ] Atributos `private` em todas as classes
@@ -563,17 +565,32 @@ Você aprendeu neste curso que:
 
 Mas o mais importante que você aprendeu é **como pensar**: modelar antes de codificar, identificar responsabilidades, proteger invariantes, e projetar para mudança.
 
+A defesa de hoje fecha a Etapa 3. Falta uma etapa — e ela usa exatamente o sistema que você acabou de defender.
+
+---
+
+## Próximo passo: Etapa 4 — o Desafio Final
+
+O **Desafio Final** não é uma atividade nova: é a extensão SOLID do mesmo sistema que você desenhou no Encontro 18 e defendeu agora. Lá você vai:
+
+1. Adicionar um novo tipo ao seu sistema sem modificar o que já existe (OCP);
+2. Separar responsabilidades que hoje estão misturadas (SRP + DIP);
+3. Encontrar e corrigir violações reais no seu próprio código (Audit);
+4. Entregar a versão final do projeto — com JOptionPane e os 5 princípios aplicados.
+
+É só na entrega do Desafio Final que o Trabalho de UC se encerra oficialmente.
+
 ---
 
 ## 🏆 Certificado de Conclusão
 
-Ao concluir este encontro e o TP3, você terá demonstrado domínio dos fundamentos de:
+Ao concluir a Etapa 4 (Desafio Final) com o link do repositório enviado, você terá demonstrado domínio dos fundamentos de:
 
 - Programação Orientada a Objetos em Java
 - Modelagem UML (Diagramas de Classes e Objetos)
 - Design de software com os princípios SOLID básicos
 
-*Parabéns pela jornada. O próximo passo é aprofundar em Design Patterns (GoF), SOLID completo e Arquitetura de Software.*
+*Parabéns pela jornada até aqui. O próximo passo, depois da entrega final, é aprofundar em Design Patterns (GoF), SOLID completo e Arquitetura de Software.*
 
 ---
 

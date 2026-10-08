@@ -4,6 +4,35 @@
 
 ---
 
+## Seu Trabalho Final de UC
+
+Os próximos encontros e o desafio final não são atividades soltas — são **quatro etapas de um único trabalho**, construídas sobre o mesmo sistema do início ao fim.
+
+| Etapa | Onde | O que você entrega |
+|---|---|---|
+| 1 — Design e Arquitetura | Encontro 18 (aqui) | Diagrama de classes aprovado pelo professor |
+| 2 — Desenvolvimento Intensivo | Encontro 19 | Código Java implementando o diagrama aprovado |
+| 3 — Defesa Arquitetural | Encontro 20 | Apresentação oral + domínio dos 5 princípios SOLID |
+| 4 — Extensão SOLID | Desafio Final | O MESMO sistema, estendido e refatorado com SOLID, com interface em JOptionPane |
+
+Não existe "projeto novo" na Etapa 4: você vai voltar ao sistema desenhado agora e torná-lo mais extensível — sem reescrever do zero.
+
+### Antes de começar: tudo que você já sabe
+
+Você já estudou, nesta ordem, tudo que é necessário para modelar o sistema abaixo sozinho. Use esta tabela como checklist mental antes de abrir o editor:
+
+| Módulo | O que você aprendeu | Onde isso aparece neste projeto |
+|---|---|---|
+| 1 — Fundamentos | Métodos estáticos, sobrecarga, passagem por valor | Métodos utilitários de `PlataformaStreaming` (busca, cálculo de totais) |
+| 2 — Classes e Objetos | Classe × objeto, construtores, composição, UML a partir de requisitos | Toda a extração de substantivos/verbos da Etapa 1 abaixo |
+| 3 — Encapsulamento | `private`/`protected`, invariantes de classe, exceções de domínio | Validações no construtor de `Artista`, `Album`, `Musica` |
+| 4 — Herança | `extends`/`super`, `@Override`, classes abstratas, `Object` | `Artista` e `Album` abstratas; `ArtistasSolo`/`Banda`, `AlbumEstudio`/`AlbumAoVivo` |
+| 5 — Polimorfismo e Interfaces | Upcasting, late binding, `instanceof`, contratos via interface | `calcularRoyalties()` polimórfico; interface `Exportavel` |
+
+Se alguma linha da tabela não fizer sentido, volte ao encontro correspondente antes de continuar — o projeto abaixo usa os cinco pilares ao mesmo tempo, sem atalhos.
+
+---
+
 ## Enunciado do Projeto Final
 
 > *"Desenvolva um sistema de gestão para uma empresa de streaming de música. O sistema deve gerenciar artistas (solos e bandas), álbuns (de estúdio e ao vivo), músicas e playlists. Qualquer artista pode ter múltiplos álbuns. Um álbum contém músicas. Um usuário pode criar playlists com músicas de diferentes álbuns. O sistema deve calcular royalties (solo: 100% do valor; banda: dividido igualmente entre membros). Deve ser possível calcular a receita total de um artista, exportar uma playlist e buscar músicas por gênero."*

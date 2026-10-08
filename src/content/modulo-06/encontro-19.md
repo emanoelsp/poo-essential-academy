@@ -2,6 +2,8 @@
 
 > **Módulo 6 · 4 aulas · 150 XP · Avaliação**
 
+> **Etapa 2 de 4 do seu Trabalho Final de UC.** Aqui você implementa em Java o diagrama aprovado no Encontro 18. Nenhuma classe nova deve surgir sem ter sido desenhada antes — se faltar algo no diagrama, volte e ajuste-o primeiro.
+
 ---
 
 ## Objetivos da Sessão
