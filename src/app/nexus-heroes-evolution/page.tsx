@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 
 const EvolutionCanvas = dynamic(() => import('./EvolutionCanvas'), { ssr: false })
@@ -319,12 +319,12 @@ export default function NexusHeroesEvolutionPage() {
   const [questAnswer, setQuestAnswer] = useState('')
   const [questResult, setQuestResult] = useState<'idle' | 'success' | 'error'>('idle')
   const [showCodex, setShowCodex] = useState(false)
-  const [nextLogId, setNextLogId] = useState(1)
+  const nextLogId = useRef(0)
 
   const addLog = useCallback((kind: LogKind, message: string) => {
-    setLogs((previous) => [...previous, { id: Date.now() + nextLogId, kind, message }].slice(-45))
-    setNextLogId((id) => id + 1)
-  }, [nextLogId])
+    nextLogId.current += 1
+    setLogs((previous) => [...previous, { id: nextLogId.current, kind, message }].slice(-45))
+  }, [])
 
   const discover = useCallback((id: string) => {
     setEvidence((previous) => previous.includes(id) ? previous : [...previous, id])
@@ -356,7 +356,7 @@ export default function NexusHeroesEvolutionPage() {
     setQuestAnswer('')
     setQuestResult('idle')
     setLogs([])
-    setNextLogId(1)
+    nextLogId.current = 0
     setPhase('playing')
     addLog('instanciacao', `new ${HERO_META[heroKind].label}("${name}") criado. O construtor chama super(nome, hp, mana).`)
     addLog('info', 'Missão: recupere os quatro fragmentos do Contrato Primordial e alcance o portal.')

@@ -220,7 +220,33 @@ public final class PosturaGuardia implements Habilidade {
 
 ---
 
-## 5. Construa o diagrama de classes a partir do Codex
+## 5. Antes de desenhar: confira se você sabe nomear as peças
+
+O diagrama de verdade vai para uma ferramenta externa — mas antes de abrir o draw.io ou o Lucidchart, confirme aqui se você já sabe nomear classes, atributos e métodos sem olhar o console. Preencha os campos tracejados; o quadro corrige na hora.
+
+```fill-uml
+CLASS:Personagem
+ATTR:nome : String
+ATTR:___:hp : int
+ATTR:maxHp : int
+METHOD:___:receberDano(int) void
+METHOD:calcularDano() int
+
+CLASS:___:Guerreiro
+METHOD:calcularDano() int
+
+CLASS:___:Habilidade
+METHOD:___:usar(Personagem) void
+
+CLASS:ExplosaoArcana
+METHOD:usar(Personagem) void
+```
+
+> **Dica:** se travar em algum campo, volte à seção 4 — cada resposta apareceu em um bloco de código ali em cima.
+
+---
+
+## 6. Construa o diagrama de classes a partir do Codex
 
 Agora desenhe o primeiro modelo do jogo. Comece com os nomes que você realmente encontrou; só depois acrescente atributos e métodos.
 
@@ -235,6 +261,16 @@ Liste as classes `Personagem`, `Guerreiro`, `Mago`, `Sentinela`, `Inimigo`, `Gob
 - use associação quando `Jogo` mantém ou utiliza objetos;
 - indique multiplicidade quando o jogo mostrar um ou vários objetos;
 - não transforme todo uso momentâneo em herança.
+
+Pratique o reconhecimento do tipo de relação nos vínculos que `Jogo` mantém com os outros objetos (generalização e realização ficam combinadas no esqueleto abaixo — aqui o foco é associação × agregação):
+
+```relationship-uml
+CLASS:Jogo
+CLASS:Personagem
+CLASS:Habilidade
+REL:Jogo->Personagem:aggregation:coordena
+REL:Jogo->Habilidade:association:aciona
+```
 
 ### Passo 3 — responsabilidades
 
@@ -279,11 +315,29 @@ classDiagram
 
 Complete o diagrama com as classes de inimigo, os itens e pelo menos duas implementações de `Habilidade`. Depois escreva uma justificativa curta para cada seta.
 
+### Passo 4 — leve o esqueleto para o draw.io ou o Lucidchart
+
+O esqueleto acima é só o ponto de partida. O diagrama que você entrega precisa ser desenhado em uma ferramenta de verdade — não em markdown.
+
+1. Abra o [draw.io](https://app.diagrams.net/) (gratuito, sem login — "Device" → "Create New Diagram" → template em branco) **ou** o [Lucidchart](https://lucid.app/) (login com Google funciona).
+2. Procure a forma **UML Class** na paleta de formas à esquerda (em ambas as ferramentas existe uma categoria "UML").
+3. Para cada classe do Passo 1, crie uma caixa com três compartimentos: nome, atributos, métodos — copie os nomes exatos que você já validou na seção 5.
+4. Trace as setas seguindo a notação:
+
+| Relação | Como desenhar | Onde aparece aqui |
+|---|---|---|
+| Generalização (herança) | seta com ponta **triangular vazada**, apontando para a superclasse | `Guerreiro`/`Mago`/`Sentinela` → `Personagem` |
+| Realização (interface) | seta **tracejada** com ponta triangular vazada | `ExplosaoArcana`/`PosturaGuardia` → `Habilidade` |
+| Associação/Agregação | linha simples ou com losango vazado, conforme você praticou no Passo 2 | `Jogo` → `Personagem`, `Jogo` → `Habilidade` |
+
+5. Marque `Personagem` e `Habilidade` com o estereótipo `<<abstract>>` / `<<interface>>` (as ferramentas têm um campo específico para isso na caixa UML).
+6. Exporte como PNG ou PDF (`File → Export as`) e salve dentro do seu repositório — é esse arquivo que entra no checklist abaixo.
+
 ---
 
-## 6. Entrega da atividade
+## 7. Entrega da atividade
 
-Entregue um único arquivo `README.md` ou PDF contendo:
+Suba um repositório no GitHub contendo:
 
 - [ ] narrativa resumida e objetivo do jogo;
 - [ ] tabela de evidências preenchida a partir do console;
@@ -291,9 +345,15 @@ Entregue um único arquivo `README.md` ou PDF contendo:
 - [ ] pelo menos duas invariantes e a visibilidade escolhida para protegê-las;
 - [ ] explicação de onde ocorre herança e onde ocorre polimorfismo;
 - [ ] explicação de onde está a interface e qual acoplamento ela reduz;
-- [ ] diagrama de classes com `Personagem` abstrata, subclasses e `Habilidade`;
+- [ ] **arquivo do diagrama de classes** exportado do draw.io/Lucidchart (PNG ou PDF), com `Personagem` abstrata, subclasses e `Habilidade`;
 - [ ] três chamadas do console transcritas e traduzidas para Java;
+- [ ] **código Java** que implementa as classes e relações do diagrama (pacote compilável, com `Main` simulando os três eventos transcritos);
 - [ ] uma proposta de extensão: adicionar um novo herói ou habilidade sem alterar o processador do jogo.
+
+```github-submit
+LABEL: Cole o link do seu repositório GitHub
+PLACEHOLDER: https://github.com/seu-usuario/nexus-heroes-contrato-final
+```
 
 ### Perguntas de defesa oral
 
